@@ -18,7 +18,7 @@ implementation("com.github.gycrosskit.permission:permission-core:0.1.0")
 implementation("com.github.gycrosskit.permission:permission-kuikly:0.1.0")
 ```
 
-Kuikly 使用 `PermissionModule`，在页面结束时调用 `dispose()`；鸿蒙宿主另外从 HAR 注册 `GycPermissionModule`。鸿蒙原生 API 是 `GycPermissionService`，位于 `@gycrosskit/permission-native`。该包须待 ohpm 审核上架并远程安装后，才能使用远程版本号；构建通过不等于已经上架。HarmonyOS 模块需声明 `ohos.permission.CAMERA`、`ohos.permission.MICROPHONE`、`ohos.permission.APPROXIMATELY_LOCATION`、`ohos.permission.LOCATION` 中实际使用的权限。
+Kuikly 使用 `PermissionModule`，在页面结束时调用 `dispose()`；鸿蒙宿主另外从 HAR 注册 `GycPermissionModule`。鸿蒙原生 API 是 `GycPermissionService`，位于 `@gycrosskit/permission-native`。HAR 的目标版本为 `0.1.1`；初版 `0.1.0` 归档缺少 README，ohpm 拒绝提交。该包须待 ohpm 审核上架并远程安装后，才能使用远程版本号；构建通过不等于已经上架。HarmonyOS 模块需声明 `ohos.permission.CAMERA`、`ohos.permission.MICROPHONE`、`ohos.permission.APPROXIMATELY_LOCATION`、`ohos.permission.LOCATION` 中实际使用的权限。
 
 ## 验证与发布
 
