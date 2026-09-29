@@ -1,0 +1,14 @@
+.gradle/
+.kotlin/
+**/build/
+**/.cxx/
+ohos/**/oh_modules/
+ohos/.hvigor/
+.build/
+.swiftpm/
+local.properties
+.idea/
+*.iml
+.DS_Store
+ohos/**/BuildProfile.ets
+ohos/**/oh-package-lock.json5
