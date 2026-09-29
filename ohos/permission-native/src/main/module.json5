@@ -1,0 +1,7 @@
+{
+  "module": {
+    "name": "PermissionNative",
+    "type": "har",
+    "deviceTypes": ["default", "tablet"]
+  }
+}

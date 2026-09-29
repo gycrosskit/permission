@@ -1,3 +1,33 @@
 # GY CrossKit Permission
 
-Android、iOS、OpenHarmony 的相机、麦克风和前台定位权限组件。详细接入说明随首个实现版本发布。
+相机、麦克风、前台定位的权限状态与申请，面向 Android、iOS 和 HarmonyOS。页面文案、申请时机、权限声明和设置页跳转由宿主负责。
+
+## 公共契约
+
+`PermissionPlatform` 提供 `getStatus`、`request`、`resumeAfterSettings`。权限为 `CAMERA`、`MICROPHONE`、`LOCATION_WHEN_IN_USE`；状态为 `NOT_DETERMINED`、`GRANTED`、`LIMITED`、`DENIED`、`RESTRICTED`。`LIMITED` 表示可用但受限，例如仅获粗略定位。
+
+Android 使用 `AndroidPermissionPlatform`，宿主 `ComponentActivity` 出现时调用 `bind(activity)`，销毁时调用 `unbind(activity)`。当前页面的权限申请会在宿主解绑时取消；另一个页面的迟到结果不会交给新页面。iOS 使用 `IosPermissionPlatform`，无需 UIViewController 绑定。宿主仍须在 Android Manifest 声明 `CAMERA`、`RECORD_AUDIO`、`ACCESS_COARSE_LOCATION`、`ACCESS_FINE_LOCATION`，在 iOS Info.plist 按需提供 `NSCameraUsageDescription`、`NSMicrophoneUsageDescription`、`NSLocationWhenInUseUsageDescription`。
+
+```kotlin
+// settings.gradle.kts: dependencyResolutionManagement.repositories
+maven { url = uri("https://jitpack.io") }
+
+// commonMain.dependencies
+implementation("com.github.gycrosskit.permission:permission-core:0.1.0")
+// 鸿蒙 Kuikly 页面另加
+implementation("com.github.gycrosskit.permission:permission-kuikly:0.1.0")
+```
+
+Kuikly 使用 `PermissionModule`，在页面结束时调用 `dispose()`；鸿蒙宿主另外从 HAR 注册 `GycPermissionModule`。鸿蒙原生 API 是 `GycPermissionService`，位于 `@gycrosskit/permission-native`。该包须待 ohpm 审核上架并远程安装后，才能使用远程版本号；构建通过不等于已经上架。HarmonyOS 模块需声明 `ohos.permission.CAMERA`、`ohos.permission.MICROPHONE`、`ohos.permission.APPROXIMATELY_LOCATION`、`ohos.permission.LOCATION` 中实际使用的权限。
+
+## 验证与发布
+
+版本 `0.1.0` 使用 Kotlin `2.2.21-1.0.0`。Maven KMP 产物在 macOS 构建并放入同版本 GitHub Release，JitPack 下载版本化归档并校验 SHA-256。iOS、HarmonyOS 的 KLIB 编译及 Android 编译、Android 状态映射测试、鸿蒙 HAR 构建与状态测试是发布前检查；系统弹窗和设置页往返仍需设备验收。
+
+```bash
+ANDROID_HOME="$HOME/Library/Android/sdk" bash gradlew :permission-core:compileDebugKotlinAndroid :permission-core:compileKotlinIosSimulatorArm64 :permission-core:compileKotlinOhosArm64 :permission-kuikly:compileKotlinOhosArm64
+node --test ohos/permission-native/test/permission.test.cjs
+cd ohos && DEVECO_SDK_HOME=/Applications/DevEco-Studio.app/Contents/sdk /Applications/DevEco-Studio.app/Contents/tools/hvigor/bin/hvigorw assembleHar --no-daemon
+```
+
+Apache-2.0，见 [LICENSE](LICENSE)。
