@@ -2,6 +2,8 @@
 
 相机、麦克风、前台定位的权限状态与申请，面向 Android、iOS 和 HarmonyOS。页面文案、申请时机、权限声明和设置页跳转由宿主负责。
 
+Maven `0.1.1` 已发布：[GitHub Release](https://github.com/gycrosskit/permission/releases/tag/0.1.1)，JitPack 状态 `ok`，独立消费的Android、iOS arm64/x64 编译、iOS Simulator Framework 链接、OHOS 编译通过。 OHPM 沿用此前已发布的 `@gycrosskit/permission-native@0.1.1`，本轮未重复发布。
+
 ## 公共契约
 
 `PermissionPlatform` 提供 `getStatus`、`request`、`resumeAfterSettings`。权限为 `CAMERA`、`MICROPHONE`、`LOCATION_WHEN_IN_USE`；状态为 `NOT_DETERMINED`、`GRANTED`、`LIMITED`、`DENIED`、`RESTRICTED`。`LIMITED` 表示可用但受限，例如仅获粗略定位。
