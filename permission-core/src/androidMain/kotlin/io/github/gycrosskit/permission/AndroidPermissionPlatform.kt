@@ -25,7 +25,9 @@ import kotlin.coroutines.resumeWithException
  * 引用：扫码等临时 Activity 覆盖主 Host 后，销毁时会自动恢复前一个宿主，避免返回主页面后权限入口失效。
  * 同一时刻只执行一个系统权限请求，Activity 销毁时会取消属于它的挂起调用，回调不会进入旧页面。
  */
-class AndroidPermissionPlatform : PermissionPlatform {
+class AndroidPermissionPlatform(
+    historyPreferencesName: String = PERMISSION_HISTORY_PREFERENCES,
+) : PermissionPlatform {
     private class ActiveRequest(
         val host: ComponentActivity,
         val permission: AppPermission,
@@ -40,7 +42,7 @@ class AndroidPermissionPlatform : PermissionPlatform {
     private val hosts = MutableStateFlow<List<ComponentActivity>>(emptyList())
     private val requestMutex = Mutex()
     private val systemRequestHistory = AndroidPermissionRequestHistory(
-        preferencesName = PERMISSION_HISTORY_PREFERENCES,
+        preferencesName = historyPreferencesName,
     )
     private var activeRequest: ActiveRequest? = null
 

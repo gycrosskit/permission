@@ -13,9 +13,9 @@ Android 使用 `AndroidPermissionPlatform`，宿主 `ComponentActivity` 出现�
 maven { url = uri("https://jitpack.io") }
 
 // commonMain.dependencies
-implementation("com.github.gycrosskit.permission:permission-core:0.1.0")
+implementation("com.github.gycrosskit.permission:permission-core:0.1.1")
 // 鸿蒙 Kuikly 页面另加
-implementation("com.github.gycrosskit.permission:permission-kuikly:0.1.0")
+implementation("com.github.gycrosskit.permission:permission-kuikly:0.1.1")
 ```
 
 Kuikly 使用 `PermissionModule`，在页面结束时调用 `dispose()`；鸿蒙宿主另外从 HAR 注册 `GycPermissionModule`。鸿蒙原生 API 是 `GycPermissionService`，位于 `@gycrosskit/permission-native`。HAR 的目标版本为 `0.1.1`；初版 `0.1.0` 归档缺少 README，ohpm 拒绝提交。该包须待 ohpm 审核上架并远程安装后，才能使用远程版本号；构建通过不等于已经上架。HarmonyOS 模块需声明 `ohos.permission.CAMERA`、`ohos.permission.MICROPHONE`、`ohos.permission.APPROXIMATELY_LOCATION`、`ohos.permission.LOCATION` 中实际使用的权限。
@@ -31,3 +31,11 @@ cd ohos && DEVECO_SDK_HOME=/Applications/DevEco-Studio.app/Contents/sdk /Applica
 ```
 
 Apache-2.0，见 [LICENSE](LICENSE)。
+
+### Android 旧申请历史兼容
+
+替换已有宿主时传 `AndroidPermissionPlatform(historyPreferencesName = "app_permission_history")`，
+沿用原 SharedPreferences 中的权限枚举名记录；默认仍使用 `gycrosskit_permission_history`。
+无需复制历史，已授权状态继续以系统为准；申请过但无 rationale 仍是 `DENIED`，不推断永久拒绝。
+
+`0.1.1` 的 Maven 包为本轮修复候选，远程可用性以独立消费结果为准；OHPM `permission-native` 不受本次 Android 修改影响，继续使用已发布的 `0.1.1`。
