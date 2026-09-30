@@ -2,8 +2,10 @@
 set -euo pipefail
 
 archive=permission-maven.tar.gz
+checksum="$(awk -v version="$VERSION" '$1 == version {print $2}' release-checksums.txt)"
+[[ "$checksum" =~ ^[a-f0-9]{64}$ ]] || { echo "No verified archive checksum for $VERSION" >&2; exit 1; }
 curl -fL --retry 3 -o "$archive" "https://github.com/gycrosskit/permission/releases/download/${VERSION}/${archive}"
-echo "27ba8c13b04661ee939720ac122677dbfa8bc15313ec9d4e66b99e884c201fb1  $archive" | sha256sum -c -
+echo "$checksum  $archive" | sha256sum -c -
 mkdir -p "$HOME/.m2/repository" build/release-maven
 tar -xzf "$archive" -C "$HOME/.m2/repository"
 tar -xzf "$archive" -C build/release-maven

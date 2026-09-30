@@ -20,6 +20,10 @@ kotlin {
             implementation(libs.androidx.core)
         }
         commonTest.dependencies { implementation(kotlin("test")) }
+        androidUnitTest.dependencies {
+            implementation("org.robolectric:robolectric:4.16")
+            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2-1.0.0")
+        }
     }
 }
 
@@ -27,6 +31,7 @@ android {
     namespace = "io.github.gycrosskit.permission"
     compileSdk = 36
     defaultConfig { minSdk = 24 }
+    testOptions.unitTests.isIncludeAndroidResources = true
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
