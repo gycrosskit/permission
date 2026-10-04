@@ -26,8 +26,14 @@ import kotlin.coroutines.resumeWithException
  * 同一时刻只执行一个系统权限请求，Activity 销毁时会取消属于它的挂起调用，回调不会进入旧页面。
  */
 class AndroidPermissionPlatform(
-    historyPreferencesName: String = PERMISSION_HISTORY_PREFERENCES,
+    requestHistory: AndroidPermissionRequestHistory,
 ) : PermissionPlatform {
+    /** 保留原构造签名和默认 namespace；也可通过主构造注入原实例/进程范围历史。 */
+    @JvmOverloads
+    constructor(historyPreferencesName: String = PERMISSION_HISTORY_PREFERENCES) : this(
+        AndroidPermissionRequestHistory(historyPreferencesName),
+    )
+
     private class ActiveRequest(
         val host: ComponentActivity,
         val permission: AppPermission,
@@ -41,9 +47,7 @@ class AndroidPermissionPlatform(
 
     private val hosts = MutableStateFlow<List<ComponentActivity>>(emptyList())
     private val requestMutex = Mutex()
-    private val systemRequestHistory = AndroidPermissionRequestHistory(
-        preferencesName = historyPreferencesName,
-    )
+    private val systemRequestHistory = requestHistory
     private var activeRequest: ActiveRequest? = null
 
     /**

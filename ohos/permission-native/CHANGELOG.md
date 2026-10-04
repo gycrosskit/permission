@@ -1,4 +1,9 @@
-# Changelog
+# 更新日志
+
+## 0.1.2（候选）
+
+- 与 permission-core/permission-kuikly 0.1.2 对齐；原生权限状态、申请时机和 Kuikly 名称保持不变。
+- Android 运行时权限执行和可注入历史在 Maven permission-core 中提供，不由 HAR 实现。
 
 ## 0.1.1
 
