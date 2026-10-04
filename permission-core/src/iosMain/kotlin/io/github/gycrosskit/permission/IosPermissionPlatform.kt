@@ -2,9 +2,11 @@ package io.github.gycrosskit.permission
 
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.CancellableContinuation
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import platform.AVFoundation.AVAuthorizationStatusAuthorized
 import platform.AVFoundation.AVAuthorizationStatusDenied
 import platform.AVFoundation.AVAuthorizationStatusRestricted
@@ -33,18 +35,15 @@ import kotlin.coroutines.resume
  */
 @OptIn(ExperimentalForeignApi::class)
 class IosPermissionPlatform : PermissionPlatform {
-    private val locationManager = CLLocationManager()
+    // CoreLocation 在创建 manager 的线程 RunLoop 投递 delegate；后台构造组件时延迟到主线程创建。
+    private val locationManager: CLLocationManager by lazy { CLLocationManager().also { it.delegate = locationDelegate } }
     private val requestMutex = Mutex()
     private val locationDelegate = LocationAuthorizationDelegate { status ->
         completeLocationRequest(locationStatus(status, locationManager.accuracyAuthorization))
     }
     private var locationContinuation: CancellableContinuation<PermissionStatus>? = null
 
-    init {
-        locationManager.delegate = locationDelegate
-    }
-
-    override suspend fun getStatus(permission: AppPermission): PermissionStatus {
+    override suspend fun getStatus(permission: AppPermission): PermissionStatus = withContext(Dispatchers.Main.immediate) {
         val systemStatus = when (permission) {
             AppPermission.CAMERA -> captureStatus(AVMediaTypeVideo)
             AppPermission.MICROPHONE -> captureStatus(AVMediaTypeAudio)
@@ -53,19 +52,21 @@ class IosPermissionPlatform : PermissionPlatform {
                 locationManager.accuracyAuthorization,
             )
         }
-        return systemStatus
+        systemStatus
     }
 
     override suspend fun request(permission: AppPermission): PermissionStatus =
-        requestMutex.withLock {
-            val current = getStatus(permission)
-            if (current != PermissionStatus.NOT_DETERMINED) {
-                return@withLock current
-            }
-            when (permission) {
-                AppPermission.CAMERA -> requestCapture(AVMediaTypeVideo)
-                AppPermission.MICROPHONE -> requestCapture(AVMediaTypeAudio)
-                AppPermission.LOCATION_WHEN_IN_USE -> requestLocationWhenInUse()
+        withContext(Dispatchers.Main.immediate) {
+            requestMutex.withLock {
+                val current = getStatus(permission)
+                if (current != PermissionStatus.NOT_DETERMINED) {
+                    return@withLock current
+                }
+                when (permission) {
+                    AppPermission.CAMERA -> requestCapture(AVMediaTypeVideo)
+                    AppPermission.MICROPHONE -> requestCapture(AVMediaTypeAudio)
+                    AppPermission.LOCATION_WHEN_IN_USE -> requestLocationWhenInUse()
+                }
             }
         }
 

@@ -9,9 +9,9 @@ kotlin {
     iosSimulatorArm64 { binaries.framework { baseName = "PermissionConsumer" } }
     ohosArm64()
     sourceSets {
-        commonMain.dependencies { implementation("com.github.gycrosskit.permission:permission-core:0.1.2") }
+        commonMain.dependencies { implementation("com.github.gycrosskit.permission:permission-core:0.1.3") }
         val ohosArm64Main by getting {
-            dependencies { implementation("com.github.gycrosskit.permission:permission-kuikly:0.1.2") }
+            dependencies { implementation("com.github.gycrosskit.permission:permission-kuikly:0.1.3") }
         }
     }
 }
