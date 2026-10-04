@@ -104,3 +104,5 @@ Android Manifest 按需声明 `CAMERA`、`RECORD_AUDIO`、`ACCESS_COARSE_LOCATIO
 - [版本与发行说明](https://github.com/gycrosskit/permission/releases)、[问题反馈](https://github.com/gycrosskit/permission/issues)。
 
 Apache-2.0，见 [LICENSE](LICENSE)。
+
+本轮制品校验与远程状态见 [0.1.3 发布验收](docs/发布验收-0.1.3.md)。
