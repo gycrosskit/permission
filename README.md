@@ -2,7 +2,9 @@
 
 相机、麦克风和前台定位的权限状态查询与申请。宿主负责申请时机、说明文案、系统权限声明和应用设置页跳转。
 
-当前源码为 0.1.2 候选，尚未发布；下方新坐标需等待发布完成。既有正式 Maven/HAR 为 0.1.1，历史验收保持。
+Maven 0.1.2 已提供为 prerelease，默认 JitPack 的 Android/iOS/OHOS 消费验证通过。
+HAR 0.1.2 已以 next 标签提交审核，registry 正式 latest 仍为 0.1.1；审核完成前使用既有 HAR。
+0.1.1 历史渠道与验收记录保留。
 
 ## 平台与要求
 
@@ -39,7 +41,7 @@ ohosArm64Main.dependencies {
 }
 ```
 
-HarmonyOS 原生包独立安装，不由 Maven 依赖自动携带：
+HarmonyOS 原生包独立安装，不由 Maven 依赖自动携带；以下 0.1.2 命令需等待审核可见，当前正式版本为 0.1.1：
 
 ```sh
 ohpm install @gycrosskit/permission-native@0.1.2
