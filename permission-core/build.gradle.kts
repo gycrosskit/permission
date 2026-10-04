@@ -16,7 +16,8 @@ kotlin {
     sourceSets {
         commonMain.dependencies { api(libs.coroutines.core) }
         androidMain.dependencies {
-            implementation(libs.androidx.activity)
+            // ComponentActivity 出现在平台构造/绑定和运行时权限扩展的公共 API 中。
+            api(libs.androidx.activity)
             implementation(libs.androidx.core)
         }
         commonTest.dependencies { implementation(kotlin("test")) }

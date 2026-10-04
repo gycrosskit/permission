@@ -2,6 +2,8 @@
 
 相机、麦克风和前台定位的权限状态查询与申请。宿主负责申请时机、说明文案、系统权限声明和应用设置页跳转。
 
+当前源码为 0.1.2 候选，尚未发布；下方新坐标需等待发布完成。既有正式 Maven/HAR 为 0.1.1，历史验收保持。
+
 ## 平台与要求
 
 | 平台 | 接入方式 | 系统要求 |
@@ -29,18 +31,18 @@ dependencyResolutionManagement {
 ```kotlin
 // build.gradle.kts: kotlin.sourceSets
 commonMain.dependencies {
-    implementation("com.github.gycrosskit.permission:permission-core:0.1.1")
+    implementation("com.github.gycrosskit.permission:permission-core:0.1.2")
 }
 // HarmonyOS Kuikly 宿主额外添加
 ohosArm64Main.dependencies {
-    implementation("com.github.gycrosskit.permission:permission-kuikly:0.1.1")
+    implementation("com.github.gycrosskit.permission:permission-kuikly:0.1.2")
 }
 ```
 
 HarmonyOS 原生包独立安装，不由 Maven 依赖自动携带：
 
 ```sh
-ohpm install @gycrosskit/permission-native@0.1.1
+ohpm install @gycrosskit/permission-native@0.1.2
 ```
 
 ## 最小使用
@@ -58,6 +60,22 @@ permissions.unbind(activity)
 ```
 
 iOS 用 `IosPermissionPlatform()` 替代 Android 实现，无需绑定 UIViewController；在主线程创建和调用。HarmonyOS 使用 `GycPermissionService` 或注册 Kuikly `PermissionModule`，见接入指南。
+
+Android 媒体执行器可复用原历史范围，不依赖 media 或业务结果类型：
+
+```kotlin
+val cameraHistory = AndroidPermissionRequestHistory() // 每个 picker 一个实例
+// 旧写相册权限的历史对象由宿主进程范围持有并注入，避免替换 saver 时丢失申请事实。
+val state = activity.requestRuntimePermission(android.Manifest.permission.CAMERA, cameraHistory)
+// 宿主映射 AndroidRuntimePermissionState 到 MediaPermissionState：
+// GRANTED -> GRANTED；REQUESTED_WITHOUT_RATIONALE -> BLOCKED；其余 -> DENIED。
+```
+
+默认历史仅在对象实例内；传 `preferencesName` 可沿用旧 namespace 持久化，同一历史对象可由多个调用方共享。
+`AndroidPermissionPlatform(requestHistory = history)` 也支持显式注入，原 `historyPreferencesName` 参数保持。
+首次/仍有 rationale 时申请；刚拒绝返回 DENIED，下次主动申请才根据历史与 rationale 返回
+REQUESTED_WITHOUT_RATIONALE。协程取消、结果交付和启动失败均注销本次 ActivityResult launcher。
+此执行器不提供相册权限管理、设置导航或媒体业务映射，旧系统 WRITE_EXTERNAL_STORAGE 仍由宿主按需声明。
 
 ## 权限与生命周期
 

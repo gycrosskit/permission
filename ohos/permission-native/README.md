@@ -2,8 +2,10 @@
 
 相机、麦克风和前台定位权限状态与申请。当前 HAR target/compatible SDK 为 HarmonyOS API 22。
 
+当前为 0.1.2 候选，尚未发布；既有正式 HAR 0.1.1 保持。Android 运行时权限执行器属于 Maven permission-core，不在本 HAR。
+
 ```sh
-ohpm install @gycrosskit/permission-native@0.1.1
+ohpm install @gycrosskit/permission-native@0.1.2
 ```
 
 ```typescript

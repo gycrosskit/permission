@@ -3,14 +3,57 @@ package io.github.gycrosskit.permission
 import android.content.Context
 import android.content.pm.PackageManager
 import androidx.activity.ComponentActivity
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
+import kotlin.coroutines.resume
 
 /** Android 运行时权限的稳定语义。 */
-internal enum class AndroidRuntimePermissionState {
+enum class AndroidRuntimePermissionState {
     GRANTED,
     NOT_REQUESTED,
     DENIED,
     REQUESTED_WITHOUT_RATIONALE,
+}
+
+/** 媒体能力由宿主映射自己的结果；刚拒绝返回 DENIED，下次检查才推断系统阻止重申。 */
+suspend fun ComponentActivity.requestRuntimePermission(
+    permission: String,
+    history: AndroidPermissionRequestHistory,
+): AndroidRuntimePermissionState = withContext(Dispatchers.Main.immediate) {
+    when (val status = runtimePermissionState(permission, history.wasRequested(this@requestRuntimePermission, permission))) {
+        AndroidRuntimePermissionState.GRANTED,
+        AndroidRuntimePermissionState.REQUESTED_WITHOUT_RATIONALE,
+        -> status
+        AndroidRuntimePermissionState.NOT_REQUESTED,
+        AndroidRuntimePermissionState.DENIED,
+        -> {
+            history.markRequested(this@requestRuntimePermission, permission)
+            val granted = suspendCancellableCoroutine { continuation ->
+                lateinit var launcher: ActivityResultLauncher<String>
+                launcher = activityResultRegistry.register(
+                    "runtime_permission_${System.nanoTime()}",
+                    ActivityResultContracts.RequestPermission(),
+                ) { granted ->
+                    launcher.unregister()
+                    if (continuation.isActive) continuation.resume(granted)
+                }
+                continuation.invokeOnCancellation { runOnUiThread { launcher.unregister() } }
+                if (continuation.isActive) {
+                    runCatching { launcher.launch(permission) }.onFailure {
+                        launcher.unregister()
+                        if (continuation.isActive) continuation.resume(false)
+                    }
+                } else {
+                    launcher.unregister()
+                }
+            }
+            if (granted) AndroidRuntimePermissionState.GRANTED else AndroidRuntimePermissionState.DENIED
+        }
+    }
 }
 
 /**
@@ -47,7 +90,7 @@ internal fun ComponentActivity.shouldShowAnyPermissionRationale(
 /**
  * 统一保存系统权限申请历史。未指定 [preferencesName] 时历史只在当前实例内有效；指定后跨进程持久化。
  */
-internal class AndroidPermissionRequestHistory(
+class AndroidPermissionRequestHistory(
     private val preferencesName: String? = null,
 ) {
     private val requestedKeys = mutableSetOf<String>()
