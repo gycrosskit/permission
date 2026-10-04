@@ -7,6 +7,7 @@ import io.github.gycrosskit.permission.AppPermission
 import io.github.gycrosskit.permission.PermissionPlatform
 import io.github.gycrosskit.permission.PermissionStatus
 import kotlinx.coroutines.CancellableContinuation
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -45,13 +46,16 @@ class PermissionModule : Module(), PermissionPlatform {
         var reference: CallbackRef? = null
         var continuation: CancellableContinuation<JSONObject?>? = null
         try {
-            return suspendCancellableCoroutine { result ->
+            val response = suspendCancellableCoroutine<JSONObject?> { result ->
                 continuation = result
                 pending += result
                 reference = toNative(false, method, params.toString(), { response ->
                     if (result.isActive) result.resume(response)
                 }, false).callbackRef
             }
+            // resume 后仍可能等待调度；销毁必须阻止这段窗口内的旧结果交付。
+            if (disposed) throw CancellationException("PermissionModule is disposed")
+            return response
         } finally {
             continuation?.let { pending.remove(it) }
             reference?.let(::removeCallback)
