@@ -6,6 +6,16 @@ Maven 0.1.2 已提供为 prerelease，默认 JitPack 的 Android/iOS/OHOS 消费
 HAR 0.1.2 已以 next 标签提交审核，registry 正式 latest 仍为 0.1.1；审核完成前使用既有 HAR。
 0.1.1 历史渠道与验收记录保留。
 
+## 0.1.3 发布候选
+
+修复 Kuikly 回调已完成但协程尚未消费时页面销毁的迟交付；iOS 权限查询/申请内部使用主线程，定位 manager 在主线程延迟创建。移除未使用的 Compose 构建依赖，并补齐新 POM 的 Apache-2.0 元数据。
+
+| 渠道 | 本轮版本 | 状态 |
+| --- | --- | --- |
+| Maven core/Kuikly | 0.1.3 | 待完整归档和真实远程消费 |
+| HarmonyOS HAR | 0.1.2 | 源码未变，沿用旧 Release 已验产物；OHPM 仍需核验审核结果 |
+
+
 ## 平台与要求
 
 | 平台 | 接入方式 | 系统要求 |
@@ -33,11 +43,11 @@ dependencyResolutionManagement {
 ```kotlin
 // build.gradle.kts: kotlin.sourceSets
 commonMain.dependencies {
-    implementation("com.github.gycrosskit.permission:permission-core:0.1.2")
+    implementation("com.github.gycrosskit.permission:permission-core:0.1.3")
 }
 // HarmonyOS Kuikly 宿主额外添加
 ohosArm64Main.dependencies {
-    implementation("com.github.gycrosskit.permission:permission-kuikly:0.1.2")
+    implementation("com.github.gycrosskit.permission:permission-kuikly:0.1.3")
 }
 ```
 
@@ -61,7 +71,7 @@ val status = permissions.request(AppPermission.CAMERA)
 permissions.unbind(activity)
 ```
 
-iOS 用 `IosPermissionPlatform()` 替代 Android 实现，无需绑定 UIViewController；在主线程创建和调用。HarmonyOS 使用 `GycPermissionService` 或注册 Kuikly `PermissionModule`，见接入指南。
+iOS 用 `IosPermissionPlatform()` 替代 Android 实现，无需绑定 UIViewController；内部切换主线程执行。HarmonyOS 使用 `GycPermissionService` 或注册 Kuikly `PermissionModule`，见接入指南。
 
 Android 媒体执行器可复用原历史范围，不依赖 media 或业务结果类型：
 

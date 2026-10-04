@@ -1,4 +1,6 @@
+import io
 import json
+import zipfile
 import sys
 import tarfile
 from pathlib import Path
@@ -18,3 +20,6 @@ with tarfile.open(output) as archive:
         assert not Path(member.name).name.startswith("._"), member.name
         if member.name.endswith(".module"):
             json.load(archive.extractfile(member))
+        if member.isfile() and Path(member.name).suffix in (".jar", ".aar", ".zip", ".klib"):
+            with zipfile.ZipFile(io.BytesIO(archive.extractfile(member).read())) as zipped:
+                assert zipped.testzip() is None, member.name
