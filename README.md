@@ -2,6 +2,17 @@
 
 相机、麦克风和前台定位的权限状态查询与申请。宿主负责申请时机、说明文案、系统权限声明和应用设置页跳转。
 
+## 0.1.4 待发布候选
+
+iOS 定位权限等待被后台取消时，把 continuation 归属判断与清理排回 Main；公开 API 保持兼容。
+
+| 渠道 | 候选版本 | 状态 |
+| --- | --- | --- |
+| Maven core/Kuikly | 0.1.4 | iOS Simulator 源码编译通过；完整制品和远程门禁待执行，尚未发布 |
+| HarmonyOS HAR | 0.1.2 | 原生源码未变，保持既有版本；Registry 状态沿用历史记录 |
+
+下方 Maven 示例与独立消费者默认版本已同步候选，远程可用性需等待 [0.1.4 远程发布验收](docs/0.1.4远程发布验收.md) 完成。
+
 Maven 0.1.2 已提供为 prerelease，默认 JitPack 的 Android/iOS/OHOS 消费验证通过。
 HAR 0.1.2 已以 next 标签提交审核，registry 正式 latest 仍为 0.1.1；审核完成前使用既有 HAR。
 0.1.1 历史渠道与验收记录保留。
@@ -118,11 +129,11 @@ dependencyResolutionManagement {
 ```kotlin
 // build.gradle.kts: kotlin.sourceSets
 commonMain.dependencies {
-    implementation("com.github.gycrosskit.permission:permission-core:0.1.3")
+    implementation("com.github.gycrosskit.permission:permission-core:0.1.4")
 }
 // HarmonyOS Kuikly 宿主额外添加
 ohosArm64Main.dependencies {
-    implementation("com.github.gycrosskit.permission:permission-kuikly:0.1.3")
+    implementation("com.github.gycrosskit.permission:permission-kuikly:0.1.4")
 }
 ```
 
@@ -180,4 +191,4 @@ Android Manifest 按需声明 `CAMERA`、`RECORD_AUDIO`、`ACCESS_COARSE_LOCATIO
 
 Apache-2.0，见 [LICENSE](LICENSE)。
 
-本轮制品校验与远程状态见 [0.1.3 发布验收](docs/发布验收-0.1.3.md)。
+本轮状态见 [0.1.4 远程发布验收](docs/0.1.4远程发布验收.md)；既有制品与远程记录见 [0.1.3 发布验收](docs/发布验收-0.1.3.md)。
