@@ -21,3 +21,7 @@ with tarfile.open(archive) as bundle:
     bundle.extractall(root)
 EXTRACT
 python3 scripts/check-maven.py "$staging/maven" com.github.gycrosskit.permission "$VERSION" permission-core,permission-kuikly ios_arm64,ios_x64,ios_simulator_arm64,ohos_arm64
+# 标签必须解析为不可变发布提交；不把当前 PR 的 SHA 当成已发布版本。
+commit="$(git ls-remote https://github.com/gycrosskit/permission.git "refs/tags/$VERSION" "refs/tags/$VERSION^{}" | awk '$2 ~ /\^\{\}$/ {peeled=$1} $2 !~ /\^\{\}$/ {direct=$1} END {print peeled ? peeled : direct}')"
+python3 scripts/check-public-maven.py --repo permission --version "$VERSION" --commit "$commit" \
+  --expected-publications permission-core,permission-core-android,permission-core-iosarm64,permission-core-iosx64,permission-core-iossimulatorarm64,permission-core-ohosarm64,permission-kuikly,permission-kuikly-ohosarm64 --output-dir "$staging/public"
