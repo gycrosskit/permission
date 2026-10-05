@@ -1,6 +1,6 @@
 {
   "name": "@gycrosskit/permission-native",
-  "version": "0.1.2",
+  "version": "0.1.5",
   "description": "Native HarmonyOS permission service and Kuikly module",
   "main": "Index.ets",
   "author": {

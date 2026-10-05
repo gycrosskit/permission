@@ -10,6 +10,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 /** Android 运行时权限的稳定语义。 */
 enum class AndroidRuntimePermissionState {
@@ -26,6 +27,7 @@ enum class AndroidRuntimePermissionState {
 /**
  * 申请单个系统权限；自动切主线程。刚拒绝返回 DENIED，下次检查才推断系统阻止重申。
  * 取消注销本次 launcher，不关闭系统弹窗；宿主避免并行发起多个请求。
+ * Launcher 注册/启动异常向上传播，只在系统受理后记录历史，不把启动失败当作用户拒绝。
  * @param permission Android Manifest 权限名，由宿主提前声明。
  * @param history 宿主共用的申请历史；不隐式创建另一个 namespace。
  */
@@ -40,7 +42,6 @@ suspend fun ComponentActivity.requestRuntimePermission(
         AndroidRuntimePermissionState.NOT_REQUESTED,
         AndroidRuntimePermissionState.DENIED,
         -> {
-            history.markRequested(this@requestRuntimePermission, permission)
             val granted = suspendCancellableCoroutine { continuation ->
                 lateinit var launcher: ActivityResultLauncher<String>
                 launcher = activityResultRegistry.register(
@@ -52,9 +53,12 @@ suspend fun ComponentActivity.requestRuntimePermission(
                 }
                 continuation.invokeOnCancellation { runOnUiThread { launcher.unregister() } }
                 if (continuation.isActive) {
-                    runCatching { launcher.launch(permission) }.onFailure {
+                    runCatching {
+                        launcher.launch(permission)
+                        history.markRequested(this@requestRuntimePermission, permission)
+                    }.onFailure {
                         launcher.unregister()
-                        if (continuation.isActive) continuation.resume(false)
+                        if (continuation.isActive) continuation.resumeWithException(it)
                     }
                 } else {
                     launcher.unregister()
