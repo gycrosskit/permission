@@ -2,16 +2,16 @@
 
 相机、麦克风和前台定位的权限状态查询与申请。宿主负责申请时机、说明文案、系统权限声明和应用设置页跳转。
 
-## 0.1.4 待发布候选
+## 0.1.4 prerelease
 
 iOS 定位权限等待被后台取消时，把 continuation 归属判断与清理排回 Main；公开 API 保持兼容。
 
-| 渠道 | 候选版本 | 状态 |
+| 渠道 | 当前版本 | 状态 |
 | --- | --- | --- |
-| Maven core/Kuikly | 0.1.4 | iOS Simulator 源码编译通过；完整制品和远程门禁待执行，尚未发布 |
+| Maven core/Kuikly | 0.1.4 | prerelease 已发布，JitPack 制品审计通过；独立消费结果见验收文档 |
 | HarmonyOS HAR | 0.1.2 | 原生源码未变，保持既有版本；Registry 状态沿用历史记录 |
 
-下方 Maven 示例与独立消费者默认版本已同步候选，远程可用性需等待 [0.1.4 远程发布验收](docs/0.1.4远程发布验收.md) 完成。
+[0.1.4 Release](https://github.com/gycrosskit/permission/releases/tag/0.1.4) 已提供固定 Maven 归档与 SHA256SUMS；JitPack 最终状态、精确 commit 和制品审计通过。源码回归、远程渠道限制及独立消费进度见 [0.1.4 远程发布验收](docs/0.1.4远程发布验收.md)，不代表生产宿主或真实设备验收通过。
 
 Maven 0.1.2 已提供为 prerelease，默认 JitPack 的 Android/iOS/OHOS 消费验证通过。
 HAR 0.1.2 已以 next 标签提交审核，registry 正式 latest 仍为 0.1.1；审核完成前使用既有 HAR。
@@ -118,6 +118,12 @@ classDiagram
 // settings.gradle.kts
 dependencyResolutionManagement {
     repositories {
+        exclusiveContent {
+            forRepository {
+                maven("https://mirrors.tencent.com/nexus/repository/maven-tencent/")
+            }
+            filter { includeGroup("com.tencent.kuikly-open") }
+        }
         maven("https://jitpack.io")
         maven("https://maven.eazytec-cloud.com/nexus/repository/maven-public/")
         google()
