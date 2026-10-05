@@ -6,7 +6,7 @@ val permissionVersion = providers.gradleProperty("permissionVersion").orElse("0.
 kotlin {
     androidTarget()
     iosArm64()
-    iosX64()
+    iosX64 { binaries.framework { baseName = "PermissionConsumer" } }
     iosSimulatorArm64 { binaries.framework { baseName = "PermissionConsumer" } }
     ohosArm64()
     sourceSets {

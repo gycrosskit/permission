@@ -57,7 +57,13 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - run: bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" --info :permission-core:compileKotlinIosArm64 :permission-core:compileKotlinIosSimulatorArm64 :permission-core:compileKotlinOhosArm64 :permission-kuikly:compileKotlinOhosArm64 --no-daemon --max-workers=1
+      - run: |
+          case "$(uname -m)" in
+            arm64) native_target=IosSimulatorArm64; native_test=iosSimulatorArm64Test ;;
+            x86_64) native_target=IosX64; native_test=iosX64Test ;;
+            *) echo "Unsupported macOS architecture" >&2; exit 1 ;;
+          esac
+          bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" --info :permission-core:compileKotlinIosArm64 :permission-core:compileKotlin${native_target} :permission-core:compileKotlinOhosArm64 :permission-kuikly:compileKotlinOhosArm64 --no-daemon --max-workers=1
   release-android:
     if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.version != '')
     runs-on: ubuntu-24.04
@@ -90,4 +96,10 @@ jobs:
           distribution: temurin
           java-version: '17'
       - run: bash scripts/ci-release.sh
-      - run: bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" --info -p verification-consumer linkDebugFrameworkIosSimulatorArm64 compileKotlinOhosArm64 -PpermissionVersion="$VERSION" --refresh-dependencies --no-daemon --max-workers=1
+      - run: |
+          case "$(uname -m)" in
+            arm64) native_target=IosSimulatorArm64; native_test=iosSimulatorArm64Test ;;
+            x86_64) native_target=IosX64; native_test=iosX64Test ;;
+            *) echo "Unsupported macOS architecture" >&2; exit 1 ;;
+          esac
+          bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" --info -p verification-consumer linkDebugFramework${native_target} compileKotlinOhosArm64 -PpermissionVersion="$VERSION" --refresh-dependencies --no-daemon --max-workers=1
