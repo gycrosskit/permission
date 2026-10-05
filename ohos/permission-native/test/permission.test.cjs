@@ -5,7 +5,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 
 const devEco = process.env.DEVECO_STUDIO_HOME || '/Applications/DevEco-Studio.app/Contents';
-const ts = require(path.join(devEco, 'tools/hvigor/hvigor/node_modules/typescript'));
+const ts = require(process.env.TYPESCRIPT_PATH || path.join(devEco, 'tools/hvigor/hvigor/node_modules/typescript'));
 const source = fs.readFileSync(path.join(__dirname, '../src/main/ets/GycPermissionService.ets'), 'utf8');
 const compiled = ts.transpileModule(source, {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 }
