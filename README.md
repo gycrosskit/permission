@@ -1,6 +1,14 @@
 # GY CrossKit Permission
 
+[本轮完整源码审查](docs/完整源码审查.md) 列出全部生产文件、公开调用链、实际验证与未测项。
+
 相机、麦克风和前台定位的权限状态查询与申请。宿主负责申请时机、说明文案、系统权限声明和应用设置页跳转。
+
+## 0.1.5 候选（未发布）
+
+本轮 Maven core/Kuikly 与 HAR 同为 `0.1.5`，尚未发布；下文安装坐标用于发布后的精确消费。
+
+Android 权限 Launcher 注册/启动失败会完整释放本次等待并传播异常，只在系统受理后记录申请历史；HAR 入口导出 `GycPermission` / `GycPermissionStatus` 类型。既有不可变版本状态见下文。
 
 ## 0.1.4 prerelease
 
@@ -135,18 +143,18 @@ dependencyResolutionManagement {
 ```kotlin
 // build.gradle.kts: kotlin.sourceSets
 commonMain.dependencies {
-    implementation("com.github.gycrosskit.permission:permission-core:0.1.4")
+    implementation("com.github.gycrosskit.permission:permission-core:0.1.5")
 }
 // HarmonyOS Kuikly 宿主额外添加
 ohosArm64Main.dependencies {
-    implementation("com.github.gycrosskit.permission:permission-kuikly:0.1.4")
+    implementation("com.github.gycrosskit.permission:permission-kuikly:0.1.5")
 }
 ```
 
 HarmonyOS 原生包独立安装，不由 Maven 依赖自动携带；以下 0.1.2 命令需等待审核可见，当前正式版本为 0.1.1：
 
 ```sh
-ohpm install @gycrosskit/permission-native@0.1.2
+ohpm install @gycrosskit/permission-native@0.1.5
 ```
 
 ## 最小使用

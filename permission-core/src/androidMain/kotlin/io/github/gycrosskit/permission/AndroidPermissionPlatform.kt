@@ -106,7 +106,6 @@ class AndroidPermissionPlatform(
                     return@withContext currentStatus
                 }
                 suspendCancellableCoroutine { continuation ->
-                    host.markRequested(permission)
                     val request = ActiveRequest(
                         host = host,
                         permission = permission,
@@ -119,19 +118,20 @@ class AndroidPermissionPlatform(
                         completeRequest(request)
                     } else {
                         // 每次请求独占 key；取消无法撤回系统弹窗，迟到结果不能交给下一次请求。
-                        request.launcher = host.activityResultRegistry.register(
-                            "app_permission_${System.nanoTime()}",
-                            ActivityResultContracts.RequestMultiplePermissions(),
-                        ) { completeRequest(request) }
-                        if (continuation.isActive) {
-                            try {
+                        try {
+                            request.launcher = host.activityResultRegistry.register(
+                                "app_permission_${System.nanoTime()}",
+                                ActivityResultContracts.RequestMultiplePermissions(),
+                            ) { completeRequest(request) }
+                            if (continuation.isActive) {
                                 request.launcher?.launch(missing.toTypedArray())
-                            } catch (error: Exception) {
+                                host.markRequested(permission)
+                            } else {
                                 clearRequest(request)
-                                if (continuation.isActive) continuation.resumeWithException(error)
                             }
-                        } else {
+                        } catch (error: Exception) {
                             clearRequest(request)
+                            if (continuation.isActive) continuation.resumeWithException(error)
                         }
                     }
                 }

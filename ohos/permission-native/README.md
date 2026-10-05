@@ -1,11 +1,13 @@
 # @gycrosskit/permission-native
 
+本轮 HAR 候选为 `0.1.5`，尚未发布；下面精确安装命令用于发布并确认可见后，历史验收不代表本候选已验收。
+
 相机、麦克风和前台定位权限状态与申请。当前 HAR target/compatible SDK 为 HarmonyOS API 22。
 
-当前为 0.1.2 候选，尚未发布；既有正式 HAR 0.1.1 保持。Android 运行时权限执行器属于 Maven permission-core，不在本 HAR。
+本候选新增公开导出 GycPermission / GycPermissionStatus；既有渠道历史状态见根 README。Android 运行时权限执行器属于 Maven permission-core，不在本 HAR。
 
 ```sh
-ohpm install @gycrosskit/permission-native@0.1.2
+ohpm install @gycrosskit/permission-native@0.1.5
 ```
 
 ```typescript

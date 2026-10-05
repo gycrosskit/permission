@@ -1,5 +1,9 @@
 # 更新日志
 
+## 0.1.5
+
+根入口补导出公开签名依赖的 GycPermission、GycPermissionStatus；服务与 Kuikly Module 保持。
+
 ## 0.1.2（候选）
 
 - 与 permission-core/permission-kuikly 0.1.2 对齐；原生权限状态、申请时机和 Kuikly 名称保持不变。
