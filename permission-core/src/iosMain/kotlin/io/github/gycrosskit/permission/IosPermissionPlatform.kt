@@ -25,6 +25,8 @@ import platform.CoreLocation.kCLAuthorizationStatusDenied
 import platform.CoreLocation.kCLAuthorizationStatusNotDetermined
 import platform.CoreLocation.kCLAuthorizationStatusRestricted
 import platform.darwin.NSObject
+import platform.darwin.dispatch_async
+import platform.darwin.dispatch_get_main_queue
 import kotlin.coroutines.resume
 
 /**
@@ -97,7 +99,10 @@ class IosPermissionPlatform : PermissionPlatform {
             }
             locationContinuation = continuation
             continuation.invokeOnCancellation {
-                if (locationContinuation === continuation) locationContinuation = null
+                // 取消可来自后台；归属判断也须在 Main，排队期间可能已有后继请求。
+                dispatch_async(dispatch_get_main_queue()) {
+                    if (locationContinuation === continuation) locationContinuation = null
+                }
             }
             locationManager.requestWhenInUseAuthorization()
         }

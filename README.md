@@ -2,6 +2,17 @@
 
 相机、麦克风和前台定位的权限状态查询与申请。宿主负责申请时机、说明文案、系统权限声明和应用设置页跳转。
 
+## 0.1.4 待发布候选
+
+iOS 定位权限等待被后台取消时，把 continuation 归属判断与清理排回 Main；公开 API 保持兼容。
+
+| 渠道 | 候选版本 | 状态 |
+| --- | --- | --- |
+| Maven core/Kuikly | 0.1.4 | iOS Simulator 源码编译通过；完整制品和远程门禁待执行，尚未发布 |
+| HarmonyOS HAR | 0.1.2 | 原生源码未变，保持既有版本；Registry 状态沿用历史记录 |
+
+下方 Maven 示例与独立消费者默认版本已同步候选，远程可用性需等待 [0.1.4 远程发布验收](docs/0.1.4远程发布验收.md) 完成。
+
 Maven 0.1.2 已提供为 prerelease，默认 JitPack 的 Android/iOS/OHOS 消费验证通过。
 HAR 0.1.2 已以 next 标签提交审核，registry 正式 latest 仍为 0.1.1；审核完成前使用既有 HAR。
 0.1.1 历史渠道与验收记录保留。
@@ -26,6 +37,81 @@ HAR 0.1.2 已以 next 标签提交审核，registry 正式 latest 仍为 0.1.1�
 
 KMP 产物使用 Kotlin `2.2.21-1.0.0`、coroutines `1.10.2-1.0.0`；Kuikly 为 `2.28.0-2.0.21-ohos`。OHOS 宿主需要匹配的 Kotlin 工具链，完整仓库配置见接入指南。
 
+## 架构与调用流程
+
+`permission-core` 定义权限与状态；Android/iOS 实现负责系统申请，HarmonyOS 通过 Kuikly Module 或直接调用 HAR。宿主负责权限声明、申请时机与设置导航。
+
+```mermaid
+flowchart TB
+    Host[宿主] --> Core[permission-core<br/>PermissionPlatform]
+    Core --> Android[Android<br/>AndroidPermissionPlatform]
+    Core --> IOS[iOS<br/>IosPermissionPlatform]
+    Core --> Module[permission-kuikly<br/>PermissionModule]
+    Android --> Result[ActivityResult<br/>系统权限]
+    IOS --> Apple[AVFoundation<br/>CoreLocation]
+    Module --> Native[HAR<br/>GycPermissionModule]
+    Host --> Service[HAR<br/>GycPermissionService]
+    Native --> Service
+    Service --> System[abilityAccessCtrl]
+```
+
+Android 申请串行执行；已经可用的权限直接返回，否则等待系统回调。协程取消不关闭系统弹窗，下次申请仍需等待真实回调或宿主解绑。
+
+```mermaid
+sequenceDiagram
+    participant Host as 宿主
+    participant Platform as AndroidPermissionPlatform
+    participant System as ActivityResult / 系统
+    Host->>Platform: bind(activity)
+    Host->>Platform: request(permission)
+    Platform->>Platform: 获取互斥锁，等待旧系统请求结束
+    Platform->>Platform: 查询权限与申请历史
+    alt 已可用或受限于系统策略
+        Platform-->>Host: 当前 PermissionStatus
+    else 需要申请
+        Platform->>System: 独立 key 注册并 launch
+        System-->>Platform: 权限回调
+        Platform->>Platform: 注销 launcher，清空请求
+        Platform-->>Host: PermissionStatus（协程仍有效）
+    end
+    Note over Host,Platform: unbind 会清理该 Activity 的请求并令挂起调用失败
+```
+
+核心类型仅展示 KMP 公共契约与实现；虚线箭头表示依赖，空心三角指向被实现的接口。
+
+```mermaid
+classDiagram
+    direction LR
+    class PermissionPlatform {
+        <<interface>>
+        +getStatus(permission) PermissionStatus
+        +request(permission) PermissionStatus
+        +resumeAfterSettings(permission) PermissionStatus
+    }
+    class AndroidPermissionPlatform {
+        +bind(activity)
+        +unbind(activity)
+    }
+    class IosPermissionPlatform
+    class PermissionModule {
+        +dispose()
+    }
+    class AppPermission {
+        <<enumeration>>
+    }
+    class PermissionStatus {
+        <<enumeration>>
+        +allowsUse Boolean
+    }
+    PermissionPlatform <|.. AndroidPermissionPlatform
+    PermissionPlatform <|.. IosPermissionPlatform
+    PermissionPlatform <|.. PermissionModule
+    PermissionPlatform ..> AppPermission : 输入
+    PermissionPlatform ..> PermissionStatus : 返回
+```
+
+源码：[公共入口与 AppPermission](permission-core/src/commonMain/kotlin/io/github/gycrosskit/permission/PermissionPlatform.kt)、[PermissionStatus](permission-core/src/commonMain/kotlin/io/github/gycrosskit/permission/PermissionStatus.kt)、[Android 实现](permission-core/src/androidMain/kotlin/io/github/gycrosskit/permission/AndroidPermissionPlatform.kt)、[iOS 实现](permission-core/src/iosMain/kotlin/io/github/gycrosskit/permission/IosPermissionPlatform.kt)、[Kuikly Module](permission-kuikly/src/commonMain/kotlin/io/github/gycrosskit/permission/kuikly/PermissionModule.kt)、[HAR Module](ohos/permission-native/src/main/ets/GycPermissionModule.ets)、[HAR Service](ohos/permission-native/src/main/ets/GycPermissionService.ets)。
+
 ## 安装
 
 ```kotlin
@@ -43,11 +129,11 @@ dependencyResolutionManagement {
 ```kotlin
 // build.gradle.kts: kotlin.sourceSets
 commonMain.dependencies {
-    implementation("com.github.gycrosskit.permission:permission-core:0.1.3")
+    implementation("com.github.gycrosskit.permission:permission-core:0.1.4")
 }
 // HarmonyOS Kuikly 宿主额外添加
 ohosArm64Main.dependencies {
-    implementation("com.github.gycrosskit.permission:permission-kuikly:0.1.3")
+    implementation("com.github.gycrosskit.permission:permission-kuikly:0.1.4")
 }
 ```
 
@@ -105,4 +191,4 @@ Android Manifest 按需声明 `CAMERA`、`RECORD_AUDIO`、`ACCESS_COARSE_LOCATIO
 
 Apache-2.0，见 [LICENSE](LICENSE)。
 
-本轮制品校验与远程状态见 [0.1.3 发布验收](docs/发布验收-0.1.3.md)。
+本轮状态见 [0.1.4 远程发布验收](docs/0.1.4远程发布验收.md)；既有制品与远程记录见 [0.1.3 发布验收](docs/发布验收-0.1.3.md)。
