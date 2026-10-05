@@ -14,7 +14,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
 import kotlin.coroutines.resume
 
-/** Bind one instance to each Kuikly page and call [dispose] when that page is destroyed. */
+/** 每个 Kuikly Page 一个实例，所有调用和 [dispose] 在同一页面协程上下文执行；桥回执等待最多 120 秒。 */
 class PermissionModule : Module(), PermissionPlatform {
     private val requestMutex = Mutex()
     private val pending = mutableSetOf<CancellableContinuation<JSONObject?>>()
@@ -62,11 +62,12 @@ class PermissionModule : Module(), PermissionPlatform {
         }
     }
 
+    /** 页面销毁时调用；幂等，取消所有挂起调用并释放回调，不关闭系统权限弹窗。 */
     fun dispose() {
         disposed = true
         pending.toList().forEach { it.cancel() }
         pending.clear()
     }
 
-    companion object { const val NAME = "GycPermissionModule" }
+    companion object { /** 与原生注册名一致的桥名称。 */ const val NAME = "GycPermissionModule" }
 }

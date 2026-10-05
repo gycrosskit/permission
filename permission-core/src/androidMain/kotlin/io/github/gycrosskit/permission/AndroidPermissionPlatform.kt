@@ -24,11 +24,15 @@ import kotlin.coroutines.resumeWithException
  * Manager 可以由 ViewModel 长期持有，但 Activity 只在自身组合或创建期动态 [bind]。宿主使用栈而不是单个
  * 引用：扫码等临时 Activity 覆盖主 Host 后，销毁时会自动恢复前一个宿主，避免返回主页面后权限入口失效。
  * 同一时刻只执行一个系统权限请求，Activity 销毁时会取消属于它的挂起调用，回调不会进入旧页面。
+ * @param requestHistory 申请历史所有者；迁移旧宿主时注入相同实例或旧 namespace。
  */
 class AndroidPermissionPlatform(
     requestHistory: AndroidPermissionRequestHistory,
 ) : PermissionPlatform {
-    /** 保留原构造签名和默认 namespace；也可通过主构造注入原实例/进程范围历史。 */
+    /**
+     * 创建持久化历史实现，保留既有构造签名。
+     * @param historyPreferencesName 默认 gycrosskit_permission_history；迁移时传宿主旧 namespace。
+     */
     @JvmOverloads
     constructor(historyPreferencesName: String = PERMISSION_HISTORY_PREFERENCES) : this(
         AndroidPermissionRequestHistory(historyPreferencesName),
@@ -55,6 +59,7 @@ class AndroidPermissionPlatform(
      *
      * Launcher 在实际申请时使用独立 key 注册，完成或 [unbind] 时注销；因此根页面可以在 Activity 已进入
      * STARTED/RESUMED 后绑定，也不会重放前一次 Activity 的权限结果。
+     * @param activity 在主线程绑定的当前宿主；同一实例重复绑定会失败。
      */
     fun bind(activity: ComponentActivity) {
         check(hosts.value.none { it === activity }) { "同一 Activity 不得重复绑定权限宿主" }
@@ -64,6 +69,7 @@ class AndroidPermissionPlatform(
     /**
      * 仅移除指定 Activity；如果它是临时顶层宿主，前一个 Host 会重新成为当前权限入口。
      * 属于销毁 Activity 的未完成请求会失败并清空，防止结果回调写入已经离开的页面。
+     * @param activity 主线程解绑的宿主；未绑定实例忽略。
      */
     fun unbind(activity: ComponentActivity) {
         val host = hosts.value.lastOrNull { it === activity } ?: return
@@ -200,18 +206,8 @@ internal fun resolveAndroidPermissionStatus(
 ): PermissionStatus = when {
     primaryGranted -> PermissionStatus.GRANTED
     alternativeGranted -> PermissionStatus.LIMITED
-    else -> when (
-        resolveAndroidRuntimePermissionState(
-            granted = false,
-            requestedBefore = hasRequested,
-            shouldShowRationale = shouldShowRationale,
-        )
-    ) {
-        AndroidRuntimePermissionState.GRANTED -> PermissionStatus.GRANTED
-        AndroidRuntimePermissionState.NOT_REQUESTED -> PermissionStatus.NOT_DETERMINED
-        AndroidRuntimePermissionState.DENIED -> PermissionStatus.DENIED
-        AndroidRuntimePermissionState.REQUESTED_WITHOUT_RATIONALE -> PermissionStatus.DENIED
-    }
+    shouldShowRationale || hasRequested -> PermissionStatus.DENIED
+    else -> PermissionStatus.NOT_DETERMINED
 }
 
 private const val PERMISSION_HISTORY_PREFERENCES = "gycrosskit_permission_history"

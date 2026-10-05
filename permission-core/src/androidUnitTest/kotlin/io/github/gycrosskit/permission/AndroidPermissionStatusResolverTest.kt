@@ -5,6 +5,14 @@ import kotlin.test.assertEquals
 
 class AndroidPermissionStatusResolverTest {
     @Test
+    fun `实时授权优先于旧拒绝历史和系统解释状态`() {
+        assertStatus(PermissionStatus.GRANTED, primaryGranted = true, alternativeGranted = true,
+            shouldShowRationale = true, hasRequested = true)
+        assertStatus(PermissionStatus.LIMITED, alternativeGranted = true,
+            shouldShowRationale = true, hasRequested = true)
+    }
+
+    @Test
     fun `主权限授权时返回完整授权`() {
         assertStatus(PermissionStatus.GRANTED, primaryGranted = true)
     }
