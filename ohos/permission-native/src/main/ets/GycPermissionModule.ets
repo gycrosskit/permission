@@ -4,8 +4,9 @@ import { GycPermission, GycPermissionService, GycPermissionStatus } from './GycP
 interface PermissionParams { permission?: string; }
 interface PermissionResult { status: string; }
 
-/** Thin Kuikly bridge. The host declares permissions and controls when to request them. */
+/** 每页权限桥；宿主声明权限并控制申请时机，销毁后抑制迟到回执。 */
 export class GycPermissionModule extends KuiklyRenderBaseModule {
+  /** 原生注册名，与 Kotlin PermissionModule.NAME 一致。 */
   static readonly MODULE_NAME: string = 'GycPermissionModule';
   private readonly service = new GycPermissionService();
   private destroyed: boolean = false;

@@ -46,7 +46,7 @@ class IosPermissionPlatform : PermissionPlatform {
     private var locationContinuation: CancellableContinuation<PermissionStatus>? = null
 
     override suspend fun getStatus(permission: AppPermission): PermissionStatus = withContext(Dispatchers.Main.immediate) {
-        val systemStatus = when (permission) {
+        when (permission) {
             AppPermission.CAMERA -> captureStatus(AVMediaTypeVideo)
             AppPermission.MICROPHONE -> captureStatus(AVMediaTypeAudio)
             AppPermission.LOCATION_WHEN_IN_USE -> locationStatus(
@@ -54,7 +54,6 @@ class IosPermissionPlatform : PermissionPlatform {
                 locationManager.accuracyAuthorization,
             )
         }
-        systemStatus
     }
 
     override suspend fun request(permission: AppPermission): PermissionStatus =
