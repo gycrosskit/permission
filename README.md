@@ -6,30 +6,30 @@
 
 ## 0.1.5 发布状态
 
-Maven core/Kuikly `0.1.5` 已提供 GitHub 预发行，JitPack 的精确标签/提交、完整 publication 和实际文件校验通过。Release HAR 已重下载校验；OHPM 以独立 `candidate-0.1.5` 标签提交审核，精确 Registry 安装仍返回 NOTFOUND，旧 next 保持。详情见[0.1.5 发布验收](docs/0.1.5发布验收.md)。
+Maven core/Kuikly `0.1.5` 已提供 GitHub 预发行，JitPack 的精确标签/提交、完整 publication 和实际文件校验通过。Release HAR 已重下载校验；OHPM 以独立 `candidate-0.1.5` 标签提交审核，精确 Registry 安装仍返回 NOTFOUND，旧 next 保持。全新远程 Maven 的 Android/iOS/OHOS 消费与 Simulator Framework 链接已通过。详情见[0.1.5 发布验收](docs/0.1.5发布验收.md)。
 
 Android 权限 Launcher 注册/启动失败会完整释放本次等待并传播异常，只在系统受理后记录申请历史；HAR 入口导出 `GycPermission` / `GycPermissionStatus` 类型。既有不可变版本状态见下文。
 
-## 0.1.4 prerelease
+## 0.1.4 历史 prerelease
 
 iOS 定位权限等待被后台取消时，把 continuation 归属判断与清理排回 Main；公开 API 保持兼容。
 
-| 渠道 | 当前版本 | 状态 |
+| 渠道 | 当时版本 | 历史状态 |
 | --- | --- | --- |
 | Maven core/Kuikly | 0.1.4 | prerelease 已发布，JitPack 制品审计通过；独立消费结果见验收文档 |
 | HarmonyOS HAR | 0.1.2 | 原生源码未变，保持既有版本；Registry 状态沿用历史记录 |
 
 [0.1.4 Release](https://github.com/gycrosskit/permission/releases/tag/0.1.4) 已提供固定 Maven 归档与 SHA256SUMS；JitPack 最终状态、精确 commit 和制品审计通过。源码回归、远程渠道限制及独立消费进度见 [0.1.4 远程发布验收](docs/0.1.4远程发布验收.md)，不代表生产宿主或真实设备验收通过。
 
-Maven 0.1.2 已提供为 prerelease，默认 JitPack 的 Android/iOS/OHOS 消费验证通过。
+历史 0.1.2 发布时：Maven 0.1.2 已提供为 prerelease，默认 JitPack 的 Android/iOS/OHOS 消费验证通过。
 HAR 0.1.2 已以 next 标签提交审核，registry 正式 latest 仍为 0.1.1；审核完成前使用既有 HAR。
 0.1.1 历史渠道与验收记录保留。
 
-## 0.1.3 prerelease
+## 0.1.3 历史 prerelease
 
 修复 Kuikly 回调已完成但协程尚未消费时页面销毁的迟交付；iOS 权限查询/申请内部使用主线程，定位 manager 在主线程延迟创建。移除未使用的 Compose 构建依赖，并补齐新 POM 的 Apache-2.0 元数据。
 
-| 渠道 | 本轮版本 | 状态 |
+| 渠道 | 当时版本 | 历史状态 |
 | --- | --- | --- |
 | Maven core/Kuikly | 0.1.3 | JitPack 全文件/hash 与 Android/OHOS/三 iOS 编译、Simulator 链接通过 |
 | HarmonyOS HAR | 0.1.2 | 源码未变，沿用旧 Release 已验产物；OHPM 仍需核验审核结果 |
@@ -151,7 +151,7 @@ ohosArm64Main.dependencies {
 }
 ```
 
-HarmonyOS 原生包独立安装，不由 Maven 依赖自动携带；以下 0.1.2 命令需等待审核可见，当前正式版本为 0.1.1：
+HarmonyOS 原生包独立安装，不由 Maven 依赖自动携带。以下 `0.1.5` Registry 命令在本轮核验时仍返回 NOTFOUND；审核期间从 [0.1.5 Release](https://github.com/gycrosskit/permission/releases/tag/0.1.5) 下载并校验 HAR 后本地安装：
 
 ```sh
 ohpm install @gycrosskit/permission-native@0.1.5
@@ -205,4 +205,4 @@ Android Manifest 按需声明 `CAMERA`、`RECORD_AUDIO`、`ACCESS_COARSE_LOCATIO
 
 Apache-2.0，见 [LICENSE](LICENSE)。
 
-本轮状态见 [0.1.4 远程发布验收](docs/0.1.4远程发布验收.md)；既有制品与远程记录见 [0.1.3 发布验收](docs/发布验收-0.1.3.md)。
+本轮状态见 [0.1.5 发布验收](docs/0.1.5发布验收.md)；历史制品与远程记录见 [0.1.4 远程发布验收](docs/0.1.4远程发布验收.md)及 [0.1.3 发布验收](docs/发布验收-0.1.3.md)。
