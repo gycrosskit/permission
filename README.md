@@ -4,9 +4,9 @@
 
 相机、麦克风和前台定位的权限状态查询与申请。宿主负责申请时机、说明文案、系统权限声明和应用设置页跳转。
 
-## 0.1.5 候选（未发布）
+## 0.1.5 发布状态
 
-本轮 Maven core/Kuikly 与 HAR 同为 `0.1.5`，尚未发布；下文安装坐标用于发布后的精确消费。
+Maven core/Kuikly `0.1.5` 已提供 GitHub 预发行，JitPack 的精确标签/提交、完整 publication 和实际文件校验通过。Release HAR 已重下载校验；OHPM 以独立 `candidate-0.1.5` 标签提交审核，精确 Registry 安装仍返回 NOTFOUND，旧 next 保持。详情见[0.1.5 发布验收](docs/0.1.5发布验收.md)。
 
 Android 权限 Launcher 注册/启动失败会完整释放本次等待并传播异常，只在系统受理后记录申请历史；HAR 入口导出 `GycPermission` / `GycPermissionStatus` 类型。既有不可变版本状态见下文。
 
