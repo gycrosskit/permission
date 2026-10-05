@@ -44,8 +44,8 @@ jobs:
           distribution: temurin
           java-version: '17'
       - run: test -f "$ANDROID_HOME/platforms/android-36/android.jar"
-      - run: bash gradlew :permission-core:testDebugUnitTest :permission-core:compileDebugKotlinAndroid --no-daemon --max-workers=1
-      - run: bash gradlew -p verification-kuikly test --no-daemon --max-workers=1
+      - run: bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" --info :permission-core:testDebugUnitTest :permission-core:compileDebugKotlinAndroid --no-daemon --max-workers=1
+      - run: bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" --info -p verification-kuikly test --no-daemon --max-workers=1
   native:
     runs-on: macos-15
     timeout-minutes: 60
@@ -57,7 +57,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - run: bash gradlew :permission-core:compileKotlinIosArm64 :permission-core:compileKotlinIosSimulatorArm64 :permission-core:compileKotlinOhosArm64 :permission-kuikly:compileKotlinOhosArm64 --no-daemon --max-workers=1
+      - run: bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" --info :permission-core:compileKotlinIosArm64 :permission-core:compileKotlinIosSimulatorArm64 :permission-core:compileKotlinOhosArm64 :permission-kuikly:compileKotlinOhosArm64 --no-daemon --max-workers=1
   release-android:
     if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.version != '')
     runs-on: ubuntu-24.04
@@ -74,7 +74,7 @@ jobs:
           java-version: '17'
       - run: test -f "$ANDROID_HOME/platforms/android-36/android.jar"
       - run: bash scripts/ci-release.sh
-      - run: bash gradlew -p verification-consumer compileDebugKotlinAndroid -PpermissionVersion="$VERSION" --refresh-dependencies --no-daemon --max-workers=1
+      - run: bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" --info -p verification-consumer compileDebugKotlinAndroid -PpermissionVersion="$VERSION" --refresh-dependencies --no-daemon --max-workers=1
   release-native:
     if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.version != '')
     runs-on: macos-15
@@ -89,4 +89,5 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - run: bash gradlew -p verification-consumer linkDebugFrameworkIosSimulatorArm64 compileKotlinOhosArm64 -PpermissionVersion="$VERSION" --refresh-dependencies --no-daemon --max-workers=1
+      - run: bash scripts/ci-release.sh
+      - run: bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" --info -p verification-consumer linkDebugFrameworkIosSimulatorArm64 compileKotlinOhosArm64 -PpermissionVersion="$VERSION" --refresh-dependencies --no-daemon --max-workers=1

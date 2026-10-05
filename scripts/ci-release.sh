@@ -7,7 +7,7 @@ checksum="$(awk -v version="$VERSION" '$1 == version {print $2}' release-checksu
 staging="$(mktemp -d)"
 trap 'rm -rf "$staging"' EXIT
 archive="$staging/permission-maven.tar.gz"
-curl -fL --retry 3 --connect-timeout 30 -o "$archive" "https://github.com/gycrosskit/permission/releases/download/$VERSION/permission-maven.tar.gz"
+curl -fsSL --retry 3 --connect-timeout 30 -o "$archive" "https://github.com/gycrosskit/permission/releases/download/$VERSION/permission-maven.tar.gz"
 echo "$checksum  $archive" | shasum -a 256 -c -
 python3 - "$archive" "$staging/maven" <<'EXTRACT'
 import sys, tarfile
