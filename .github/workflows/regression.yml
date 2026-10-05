@@ -15,7 +15,11 @@ permissions:
   contents: read
 # JVM 启动前设置；Gradle init 时 DNS 策略可能已初始化，不能在那时才改。
 env:
-  JAVA_TOOL_OPTIONS: -Djava.security.properties=${{ github.workspace }}/scripts/ci-java.security
+  # 为 URLConnection 下载设置等待上限；失败仍使真实构建/测试门禁失败。
+  JAVA_TOOL_OPTIONS: >-
+    -Djava.security.properties=${{ github.workspace }}/scripts/ci-java.security
+    -Dsun.net.client.defaultConnectTimeout=30000
+    -Dsun.net.client.defaultReadTimeout=60000
 concurrency:
   group: regression-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -50,7 +54,6 @@ jobs:
       - run: test -f "$ANDROID_HOME/platforms/android-36/android.jar"
       - run: bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" --info :permission-core:testDebugUnitTest :permission-core:compileDebugKotlinAndroid --no-daemon --max-workers=1
       - run: |
-          curl --fail --silent --show-error --max-time 60 -o "$RUNNER_TEMP/kotlin-jvm-plugin.pom" -w "Kotlin JVM marker HTTP %{http_code}\n" https://maven.eazytec-cloud.com/nexus/repository/maven-public/org/jetbrains/kotlin/jvm/org.jetbrains.kotlin.jvm.gradle.plugin/2.2.21-1.0.0/org.jetbrains.kotlin.jvm.gradle.plugin-2.2.21-1.0.0.pom
           bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" -p verification-kuikly test --refresh-dependencies --info --no-daemon --max-workers=1
   native:
     runs-on: macos-15
