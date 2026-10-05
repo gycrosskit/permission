@@ -18,6 +18,6 @@ with tarfile.open(archive) as bundle:
     for item in bundle.getmembers():
         assert item.isfile() or item.isdir(), f"Unexpected archive member: {item.name}"
         assert (root / item.name).resolve().is_relative_to(root), item.name
-    bundle.extractall(root, filter='data')
+    bundle.extractall(root)
 EXTRACT
 python3 scripts/check-maven.py "$staging/maven" com.github.gycrosskit.permission "$VERSION" permission-core,permission-kuikly ios_arm64,ios_x64,ios_simulator_arm64,ohos_arm64

@@ -27,10 +27,11 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           persist-credentials: false
+      - run: npm install --prefix "$RUNNER_TEMP/ci-tools" --ignore-scripts --no-audit --no-fund typescript@4.9.5
       - run: |
           python3 scripts/test-check-maven.py
           python3 scripts/test-jitpack-metadata.py
-          node --test ohos/permission-native/test/permission.test.cjs
+          TYPESCRIPT_PATH="$RUNNER_TEMP/ci-tools/node_modules/typescript" node --test ohos/permission-native/test/permission.test.cjs
   android:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
@@ -42,7 +43,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+      - run: test -f "$ANDROID_HOME/platforms/android-36/android.jar"
       - run: bash gradlew :permission-core:testDebugUnitTest :permission-core:compileDebugKotlinAndroid --no-daemon --max-workers=1
       - run: bash gradlew -p verification-kuikly test --no-daemon --max-workers=1
   native:
@@ -71,7 +72,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+      - run: test -f "$ANDROID_HOME/platforms/android-36/android.jar"
       - run: bash scripts/ci-release.sh
       - run: bash gradlew -p verification-consumer compileDebugKotlinAndroid -PpermissionVersion="$VERSION" --refresh-dependencies --no-daemon --max-workers=1
   release-native:
