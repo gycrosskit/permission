@@ -2,6 +2,7 @@ plugins {
     kotlin("multiplatform") version "2.2.21-1.0.0"
     id("com.android.library") version "8.10.1"
 }
+val permissionVersion = providers.gradleProperty("permissionVersion").orElse("0.1.5").get()
 kotlin {
     androidTarget()
     iosArm64()
@@ -9,9 +10,9 @@ kotlin {
     iosSimulatorArm64 { binaries.framework { baseName = "PermissionConsumer" } }
     ohosArm64()
     sourceSets {
-        commonMain.dependencies { implementation("com.github.gycrosskit.permission:permission-core:0.1.5") }
+        commonMain.dependencies { implementation("com.github.gycrosskit.permission:permission-core:$permissionVersion") }
         val ohosArm64Main by getting {
-            dependencies { implementation("com.github.gycrosskit.permission:permission-kuikly:0.1.5") }
+            dependencies { implementation("com.github.gycrosskit.permission:permission-kuikly:$permissionVersion") }
         }
     }
 }
