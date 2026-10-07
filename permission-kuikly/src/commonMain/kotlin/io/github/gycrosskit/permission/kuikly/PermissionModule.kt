@@ -13,12 +13,15 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
 import kotlin.coroutines.resume
+import kotlin.random.Random
 
 /** 每个 Kuikly Page 一个实例，所有调用和 [dispose] 在同一页面协程上下文执行；桥回执等待最多 120 秒。 */
 class PermissionModule : Module(), PermissionPlatform {
     private val requestMutex = Mutex()
     private val pending = mutableSetOf<CancellableContinuation<JSONObject?>>()
     private var disposed = false
+    private val requestPrefix = Random.nextLong().toString()
+    private var sequence = 0L
 
     override fun moduleName(): String = NAME
 
@@ -43,6 +46,9 @@ class PermissionModule : Module(), PermissionPlatform {
 
     private suspend fun invoke(method: String, params: JSONObject): JSONObject? {
         check(!disposed) { "PermissionModule is disposed" }
+        val requestId = "${requestPrefix}_${++sequence}"
+        params.put("requestId", requestId)
+        var completed = false
         var reference: CallbackRef? = null
         var continuation: CancellableContinuation<JSONObject?>? = null
         try {
@@ -50,6 +56,7 @@ class PermissionModule : Module(), PermissionPlatform {
                 continuation = result
                 pending += result
                 reference = toNative(false, method, params.toString(), { response ->
+                    completed = true
                     if (result.isActive) result.resume(response)
                 }, false).callbackRef
             }
@@ -58,6 +65,10 @@ class PermissionModule : Module(), PermissionPlatform {
             return response
         } finally {
             continuation?.let { pending.remove(it) }
+            // 只能撤销还在原生队列中的申请；已经展示的系统弹窗继续持有全局屏障。
+            if (method == "request" && !completed) {
+                asyncToNativeMethod("cancelQueued", JSONObject().apply { put("requestId", requestId) }, null)
+            }
             reference?.let(::removeCallback)
         }
     }
