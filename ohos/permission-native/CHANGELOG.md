@@ -1,5 +1,9 @@
 # 更新日志
 
+## 0.1.6（待发布候选）
+
+跨 Page 系统授权串行，排队项通过 requestId/cancelQueued 撤销；已展示弹窗继续等待真实回执。保留无 requestId 的 legacy 调用。
+
 ## 0.1.5
 
 根入口补导出公开签名依赖的 GycPermission、GycPermissionStatus；服务与 Kuikly Module 保持。

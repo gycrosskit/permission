@@ -20,6 +20,8 @@ class PermissionModuleLifecycleTest {
         runCurrent()
         assertEquals(2, module.calls.size)
         assertEquals(1, module.removedCallbacks)
+        assertEquals(1, module.cancelled.size)
+        assertTrue(module.calls.first().second.contains(module.cancelled.single().optString("requestId")))
         oldResponse(JSONObject().apply { put("status", "GRANTED") })
         runCurrent()
         assertFalse(second.isCompleted)
@@ -63,5 +65,6 @@ class PermissionModuleLifecycleTest {
         module.response(JSONObject().apply { put("status", "LIMITED") })
         assertEquals(PermissionStatus.LIMITED, result.await())
         assertEquals(1, module.removedCallbacks)
+        assertTrue(module.cancelled.isEmpty(), "completed result does not send a cancellation")
     }
 }

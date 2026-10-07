@@ -98,6 +98,7 @@ test('权限桥校验输入并在销毁后抑制迟到授权回执', async () =>
   assert.deepEqual(values.slice(-2), ['NOT_DETERMINED', 'error'], 'reading status does not require a UI host');
   bridge.controller = { getUIAbilityContext: () => ({}) };
   invoke('request', '{"permission":"CAMERA"}');
+  await flush();
   assert.equal(requests, 1);
   const beforeDestroy = values.length;
   bridge.onDestroy();
@@ -106,4 +107,71 @@ test('权限桥校验输入并在销毁后抑制迟到授权回执', async () =>
   assert.equal(values.length, beforeDestroy);
   assert.equal(requests, 1, 'destroyed bridge cannot start another system request');
   assert.equal(destroyed, 1);
+});
+
+test('不同页面申请等真实系统回执；销毁队列项不弹框，失败不阻塞后继', async () => {
+  const calls = [];
+  const exports = {};
+  vm.runInNewContext(compiled, { exports, require: () => ({ abilityAccessCtrl: {
+    PermissionStatus: { GRANTED: 0, NOT_DETERMINED: 1 },
+    createAtManager: () => ({
+      getSelfPermissionStatus: () => 1,
+      requestPermissionsFromUser: (_, names) => new Promise((resolve, reject) => {
+        calls.push({ names: Array.from(names), resolve, reject });
+      })
+    })
+  } }) });
+  const first = new exports.GycPermissionService();
+  const next = new exports.GycPermissionService();
+  const camera = first.request({}, 'CAMERA');
+  let active = true;
+  const destroyed = next.request({}, 'MICROPHONE', () => active);
+  const successor = next.request({}, 'LOCATION_WHEN_IN_USE');
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(calls.length, 1);
+  active = false;
+  calls[0].resolve();
+  await camera; await destroyed;
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(calls.length, 2);
+  assert.deepEqual(calls[1].names, ['ohos.permission.APPROXIMATELY_LOCATION', 'ohos.permission.LOCATION']);
+  const failed = assert.rejects(successor);
+  calls[1].reject(new Error('SDK unavailable'));
+  await failed;
+  const retry = first.request({}, 'CAMERA');
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(calls.length, 3);
+  calls[2].resolve(); await retry;
+});
+
+test('本地取消只撤销排队申请，不释放已显示系统弹窗的屏障', async () => {
+  const calls = [], serviceExports = {}, bridgeExports = {};
+  vm.runInNewContext(compiled, { exports: serviceExports, require: () => ({ abilityAccessCtrl: {
+    PermissionStatus: { GRANTED: 0, NOT_DETERMINED: 1 },
+    createAtManager: () => ({ getSelfPermissionStatus: () => 1,
+      requestPermissionsFromUser: (_, names) => new Promise(resolve => calls.push({ names: Array.from(names), resolve })) })
+  } }) });
+  const bridgeSource = fs.readFileSync(path.join(__dirname, '../src/main/ets/GycPermissionModule.ets'), 'utf8');
+  vm.runInNewContext(ts.transpileModule(bridgeSource, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 }
+  }).outputText, { exports: bridgeExports, require: name => name === './GycPermissionService' ? serviceExports : {
+    KuiklyRenderBaseModule: class { controller = { getUIAbilityContext: () => ({}) }; onDestroy() {} }
+  } });
+  const first = new bridgeExports.GycPermissionModule(), page = new bridgeExports.GycPermissionModule();
+  const destroyed = new bridgeExports.GycPermissionModule();
+  const invoke = (module, method, id, permission = 'CAMERA') => module.call(method,
+    JSON.stringify({ requestId: id, permission }), null);
+  const flush = () => new Promise(resolve => setImmediate(resolve));
+  invoke(first, 'request', 'visible'); await flush();
+  invoke(page, 'request', 'old', 'MICROPHONE');
+  invoke(page, 'cancelQueued', 'old');
+  invoke(page, 'request', 'latest', 'LOCATION_WHEN_IN_USE');
+  invoke(destroyed, 'request', 'destroyed'); destroyed.onDestroy();
+  invoke(first, 'cancelQueued', 'visible'); await flush();
+  assert.equal(calls.length, 1, 'cancel cannot close or release the real system dialog');
+  calls[0].resolve(); await flush();
+  assert.equal(calls.length, 2, 'cancelled queued microphone did not show a dialog');
+  assert.deepEqual(calls[1].names, ['ohos.permission.APPROXIMATELY_LOCATION', 'ohos.permission.LOCATION']);
+  calls[1].resolve(); await flush();
+  assert.equal(calls.length, 2, 'destroyed queued page never starts a dialog');
 });
