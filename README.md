@@ -16,7 +16,7 @@ core 提供相机、麦克风、前台定位的五种权限状态及申请/恢�
 
 此版本将 Android `isPermissionRevokedByPolicy` 映射为 `RESTRICTED`；已有完整/粗略授权优先，设备策略限制不引导为普通设置恢复。
 
-## 0.1.5 发布状态
+## 0.1.5 历史发布状态
 
 Maven core/Kuikly `0.1.5` 已提供 GitHub 预发行，JitPack 的精确标签/提交、完整 publication 和实际文件校验通过。Release HAR 已重下载校验；OHPM 以独立 `candidate-0.1.5` 标签提交审核，精确 Registry 安装仍返回 NOTFOUND，旧 next 保持。全新远程 Maven 的 Android/iOS/OHOS 消费与 Simulator Framework 链接已通过。详情见[0.1.5 发布验收](docs/0.1.5发布验收.md)。
 
@@ -163,10 +163,10 @@ ohosArm64Main.dependencies {
 }
 ```
 
-HarmonyOS 原生包独立安装，不由 Maven 依赖自动携带。以下 `0.1.5` Registry 命令在本轮核验时仍返回 NOTFOUND；审核期间从 [0.1.5 Release](https://github.com/gycrosskit/permission/releases/tag/0.1.5) 下载并校验 HAR 后本地安装：
+HarmonyOS 原生包独立安装，不由 Maven 依赖自动携带；当前保留 HAR `0.1.6`。精确 Registry 安装与固定 [0.1.6 Release HAR](https://github.com/gycrosskit/permission/releases/tag/0.1.6) 消费分别验收，实际状态见顶部版本发布记录：
 
 ```sh
-ohpm install @gycrosskit/permission-native@0.1.5
+ohpm install @gycrosskit/permission-native@0.1.6
 ```
 
 ## 最小使用
