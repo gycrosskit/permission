@@ -4,7 +4,7 @@
 
 core 提供相机、麦克风、前台定位的五种权限状态及申请/恢复；无CMP UI模块，permission-kuikly仅OHOS Module，A/i两套UI复用宿主注入的原生实现。
 
-适用版本：Maven 0.1.8；HAR 0.1.6沿用原字节。此版本为发布候选，远程验收以固定 Release 结果为准。本次修复与平台边界见[功能与平台差异](docs/功能与平台差异.md)，构建与渠道验收见[版本发布记录](https://github.com/gycrosskit/permission/releases/tag/0.1.8)；下方旧版本记录保留其历史范围。
+适用版本：Maven 0.1.8；HAR 0.1.6沿用原字节。远程验收以固定 Release 结果为准。本次修复与平台边界见[功能与平台差异](docs/功能与平台差异.md)，构建与渠道验收见[版本发布记录](https://github.com/gycrosskit/permission/releases/tag/0.1.8)；下方旧版本记录保留其历史范围。
 
 当前测试覆盖、执行时点和未验收项集中见[验证范围](docs/功能与平台差异.md#验证范围)，复现命令见[开发与验证](docs/开发与验证.md)。
 
