@@ -67,4 +67,18 @@ class PermissionModuleLifecycleTest {
         assertEquals(1, module.removedCallbacks)
         assertTrue(module.cancelled.isEmpty(), "completed result does not send a cancellation")
     }
+    @Test fun `settings recovery preserves decided states without reopening permission UI`() = runTest {
+        for (status in listOf(PermissionStatus.GRANTED, PermissionStatus.LIMITED,
+                PermissionStatus.DENIED, PermissionStatus.RESTRICTED)) {
+            val module = PermissionModule()
+            val result = async { module.resumeAfterSettings(AppPermission.CAMERA) }
+            runCurrent()
+            module.response(JSONObject().apply { put("status", status.name) })
+            assertEquals(status, result.await())
+            assertEquals(listOf("getStatus"), module.calls.map { it.first })
+            assertEquals(1, module.removedCallbacks)
+            module.dispose()
+        }
+    }
+
 }
