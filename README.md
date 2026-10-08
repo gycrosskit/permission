@@ -1,12 +1,22 @@
 # GY CrossKit Permission
 
-当前源码新增[跨端行为候选](docs/跨端行为候选.md)，尚未发布；下方远程版本验收仍对应其既有不可变标签。
+## 当前功能与平台边界
 
-[本轮完整源码审查](docs/完整源码审查.md) 列出全部生产文件、公开调用链、实际验证与未测项。
+core 提供相机、麦克风、前台定位的五种权限状态及申请/恢复；无CMP UI模块，permission-kuikly仅OHOS Module，A/i两套UI复用宿主注入的原生实现。
+
+适用版本：Maven 0.1.7；HAR 0.1.6沿用原字节。本次修复与平台边界见[功能与平台差异](docs/功能与平台差异.md)，构建与渠道验收见[版本发布记录](https://github.com/gycrosskit/permission/releases/tag/0.1.7)；下方旧版本记录保留其历史范围。
+
+当前测试覆盖、执行时点和未验收项集中见[验证范围](docs/功能与平台差异.md#验证范围)，复现命令见[开发与验证](docs/开发与验证.md)。
+
+此版本包含已复核的跨端行为修复；[历史源码候选记录](docs/跨端行为候选.md)和下方旧版验收保持其原时点，当前范围见顶部功能与平台差异。
+
+[历史完整源码审查](docs/完整源码审查.md) 列出全部生产文件、公开调用链、实际验证与未测项。
 
 相机、麦克风和前台定位的权限状态查询与申请。宿主负责申请时机、说明文案、系统权限声明和应用设置页跳转。
 
-## 0.1.5 发布状态
+此版本将 Android `isPermissionRevokedByPolicy` 映射为 `RESTRICTED`；已有完整/粗略授权优先，设备策略限制不引导为普通设置恢复。
+
+## 0.1.5 历史发布状态
 
 Maven core/Kuikly `0.1.5` 已提供 GitHub 预发行，JitPack 的精确标签/提交、完整 publication 和实际文件校验通过。Release HAR 已重下载校验；OHPM 以独立 `candidate-0.1.5` 标签提交审核，精确 Registry 安装仍返回 NOTFOUND，旧 next 保持。全新远程 Maven 的 Android/iOS/OHOS 消费与 Simulator Framework 链接已通过。详情见[0.1.5 发布验收](docs/0.1.5发布验收.md)。
 
@@ -145,18 +155,18 @@ dependencyResolutionManagement {
 ```kotlin
 // build.gradle.kts: kotlin.sourceSets
 commonMain.dependencies {
-    implementation("com.github.gycrosskit.permission:permission-core:0.1.5")
+    implementation("com.github.gycrosskit.permission:permission-core:0.1.7")
 }
 // HarmonyOS Kuikly 宿主额外添加
 ohosArm64Main.dependencies {
-    implementation("com.github.gycrosskit.permission:permission-kuikly:0.1.5")
+    implementation("com.github.gycrosskit.permission:permission-kuikly:0.1.7")
 }
 ```
 
-HarmonyOS 原生包独立安装，不由 Maven 依赖自动携带。以下 `0.1.5` Registry 命令在本轮核验时仍返回 NOTFOUND；审核期间从 [0.1.5 Release](https://github.com/gycrosskit/permission/releases/tag/0.1.5) 下载并校验 HAR 后本地安装：
+HarmonyOS 原生包独立安装，不由 Maven 依赖自动携带；当前保留 HAR `0.1.6`。精确 Registry 安装与固定 [0.1.6 Release HAR](https://github.com/gycrosskit/permission/releases/tag/0.1.6) 消费分别验收，实际状态见顶部版本发布记录：
 
 ```sh
-ohpm install @gycrosskit/permission-native@0.1.5
+ohpm install @gycrosskit/permission-native@0.1.6
 ```
 
 ## 最小使用

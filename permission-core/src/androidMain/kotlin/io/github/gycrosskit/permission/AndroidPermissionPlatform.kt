@@ -177,6 +177,7 @@ class AndroidPermissionPlatform(
             alternativeGranted = permissions.drop(1).any(::isRuntimePermissionGranted),
             shouldShowRationale = shouldShowAnyPermissionRationale(permissions.asList()),
             hasRequested = hasRequested,
+            policyRestricted = permissions.any { packageManager.isPermissionRevokedByPolicy(it, packageName) },
         )
     }
 
@@ -203,9 +204,11 @@ internal fun resolveAndroidPermissionStatus(
     alternativeGranted: Boolean,
     shouldShowRationale: Boolean,
     hasRequested: Boolean,
+    policyRestricted: Boolean = false,
 ): PermissionStatus = when {
     primaryGranted -> PermissionStatus.GRANTED
     alternativeGranted -> PermissionStatus.LIMITED
+    policyRestricted -> PermissionStatus.RESTRICTED
     shouldShowRationale || hasRequested -> PermissionStatus.DENIED
     else -> PermissionStatus.NOT_DETERMINED
 }

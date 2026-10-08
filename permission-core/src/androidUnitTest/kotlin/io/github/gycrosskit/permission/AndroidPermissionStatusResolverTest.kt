@@ -4,6 +4,12 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class AndroidPermissionStatusResolverTest {
+    @Test fun `设备策略限制不可误报为尚未申请或普通拒绝`() {
+        assertEquals(PermissionStatus.RESTRICTED, resolveAndroidPermissionStatus(false, false, false, false, true))
+        assertEquals(PermissionStatus.RESTRICTED, resolveAndroidPermissionStatus(false, false, true, true, true))
+        assertEquals(PermissionStatus.GRANTED, resolveAndroidPermissionStatus(true, false, false, true, true))
+        assertEquals(PermissionStatus.LIMITED, resolveAndroidPermissionStatus(false, true, false, true, true))
+    }
     @Test
     fun `实时授权优先于旧拒绝历史和系统解释状态`() {
         assertStatus(PermissionStatus.GRANTED, primaryGranted = true, alternativeGranted = true,
