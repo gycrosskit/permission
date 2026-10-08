@@ -1,9 +1,8 @@
 package io.github.gycrosskit.permission
 
 import kotlinx.cinterop.ExperimentalForeignApi
-import kotlinx.coroutines.CancellableContinuation
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -25,9 +24,6 @@ import platform.CoreLocation.kCLAuthorizationStatusDenied
 import platform.CoreLocation.kCLAuthorizationStatusNotDetermined
 import platform.CoreLocation.kCLAuthorizationStatusRestricted
 import platform.darwin.NSObject
-import platform.darwin.dispatch_async
-import platform.darwin.dispatch_get_main_queue
-import kotlin.coroutines.resume
 
 /**
  * iOS 原生权限实现。AVFoundation 权限直接桥接 completion handler；定位通过长期持有的
@@ -43,7 +39,9 @@ class IosPermissionPlatform : PermissionPlatform {
     private val locationDelegate = LocationAuthorizationDelegate { status ->
         completeLocationRequest(locationStatus(status, locationManager.accuracyAuthorization))
     }
-    private var locationContinuation: CancellableContinuation<PermissionStatus>? = null
+    // Independent of the caller Job: cancelling a waiter cannot dismiss the native prompt.
+    private var nativeRequest: CompletableDeferred<PermissionStatus>? = null
+    private var locationRequest: CompletableDeferred<PermissionStatus>? = null
 
     override suspend fun getStatus(permission: AppPermission): PermissionStatus = withContext(Dispatchers.Main.immediate) {
         when (permission) {
@@ -59,6 +57,8 @@ class IosPermissionPlatform : PermissionPlatform {
     override suspend fun request(permission: AppPermission): PermissionStatus =
         withContext(Dispatchers.Main.immediate) {
             requestMutex.withLock {
+                nativeRequest?.await()
+                nativeRequest = null
                 val current = getStatus(permission)
                 if (current != PermissionStatus.NOT_DETERMINED) {
                     return@withLock current
@@ -79,38 +79,39 @@ class IosPermissionPlatform : PermissionPlatform {
             else -> PermissionStatus.NOT_DETERMINED
         }
 
-    private suspend fun requestCapture(
-        mediaType: String?,
-    ): PermissionStatus = suspendCancellableCoroutine { continuation ->
-        AVCaptureDevice.requestAccessForMediaType(mediaType) { granted: Boolean ->
-            if (continuation.isActive) {
-                continuation.resume(
-                    if (granted) PermissionStatus.GRANTED else PermissionStatus.DENIED,
-                )
+    private suspend fun requestCapture(mediaType: String?): PermissionStatus {
+        val result = CompletableDeferred<PermissionStatus>()
+        nativeRequest = result
+        try {
+            AVCaptureDevice.requestAccessForMediaType(mediaType) { granted: Boolean ->
+                result.complete(if (granted) PermissionStatus.GRANTED else PermissionStatus.DENIED)
             }
+        } catch (error: Exception) {
+            nativeRequest = null
+            throw error
         }
+        return result.await()
     }
 
-    private suspend fun requestLocationWhenInUse(): PermissionStatus =
-        suspendCancellableCoroutine { continuation ->
-            locationContinuation?.let { previous ->
-                if (previous.isActive) previous.resume(PermissionStatus.DENIED)
-            }
-            locationContinuation = continuation
-            continuation.invokeOnCancellation {
-                // 取消可来自后台；归属判断也须在 Main，排队期间可能已有后继请求。
-                dispatch_async(dispatch_get_main_queue()) {
-                    if (locationContinuation === continuation) locationContinuation = null
-                }
-            }
+    private suspend fun requestLocationWhenInUse(): PermissionStatus {
+        val result = CompletableDeferred<PermissionStatus>()
+        nativeRequest = result
+        locationRequest = result
+        try {
             locationManager.requestWhenInUseAuthorization()
+        } catch (error: Exception) {
+            locationRequest = null
+            nativeRequest = null
+            throw error
         }
+        return result.await()
+    }
 
     private fun completeLocationRequest(status: PermissionStatus) {
         if (status == PermissionStatus.NOT_DETERMINED) return
-        val continuation = locationContinuation ?: return
-        locationContinuation = null
-        if (continuation.isActive) continuation.resume(status)
+        val result = locationRequest ?: return
+        locationRequest = null
+        result.complete(status)
     }
 
     private fun locationStatus(

@@ -1,0 +1,2 @@
+package kotlinx.cinterop
+@RequiresOptIn annotation class ExperimentalForeignApi

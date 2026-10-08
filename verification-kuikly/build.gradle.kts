@@ -3,7 +3,7 @@ kotlin { compilerOptions.jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget
 java { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
 sourceSets.test {
     // 直接编译生产源码，Kuikly 传输替身仅在该独立测试工程存在。
-    kotlin.srcDirs("../permission-kuikly/src/commonMain/kotlin", "../permission-core/src/commonMain/kotlin")
+    kotlin.srcDirs("../permission-kuikly/src/commonMain/kotlin", "../permission-core/src/commonMain/kotlin", "../permission-core/src/iosMain/kotlin")
 }
 dependencies {
     testImplementation(kotlin("test-junit"))
