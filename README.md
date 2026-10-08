@@ -155,11 +155,11 @@ dependencyResolutionManagement {
 ```kotlin
 // build.gradle.kts: kotlin.sourceSets
 commonMain.dependencies {
-    implementation("com.github.gycrosskit.permission:permission-core:0.1.5")
+    implementation("com.github.gycrosskit.permission:permission-core:0.1.7")
 }
 // HarmonyOS Kuikly 宿主额外添加
 ohosArm64Main.dependencies {
-    implementation("com.github.gycrosskit.permission:permission-kuikly:0.1.5")
+    implementation("com.github.gycrosskit.permission:permission-kuikly:0.1.7")
 }
 ```
 
