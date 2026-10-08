@@ -19,6 +19,7 @@ permissions:
   contents: read
 # JVM 启动前设置；Gradle init 时 DNS 策略可能已初始化，不能在那时才改。
 env:
+  CI_FORK_HOST_FALLBACK_IP: ${{ vars.CI_FORK_HOST_FALLBACK_IP }}
   # 为 URLConnection 下载设置等待上限；失败仍使真实构建/测试门禁失败。
   JAVA_TOOL_OPTIONS: >-
     -Djava.security.properties=${{ github.workspace }}/scripts/ci-java.security
