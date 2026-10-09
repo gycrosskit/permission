@@ -1,10 +1,13 @@
 # GY CrossKit Permission
 
+本版源码 Maven `0.1.9` 提供 `permission-kuikly` Android、iosArm64、iosX64、iosSimulatorArm64 targets、原生 receiver 和每 Renderer handler。iOS 可选 Pod `GycPermissionKuikly/Kuikly` `0.1.9` 使用真实 `OpenKuiklyIOSRender 2.28.0`；Kotlin handler 由宿主已有 Shared framework 导出。发布与远程消费状态以[对应 Release](https://github.com/gycrosskit/permission/releases/tag/0.1.9)为准。历史基线 Maven `0.1.8` 的 `-kuikly` 仅含 OHOS 变体；原 HAR 沿用。宿主需注册并维护已有原生能力 owner，示例见[接入指南](docs/接入指南.md#androidios-kuikly-native-module)。
+
+
 ## 当前功能与平台边界
 
-core 提供相机、麦克风、前台定位的五种权限状态及申请/恢复；无CMP UI模块，permission-kuikly仅OHOS Module，A/i两套UI复用宿主注入的原生实现。
+core 提供相机、麦克风、前台定位的五种权限状态及申请/恢复；无CMP UI模块，permission-kuikly包含三端 Module 与 Android/iOS receiver，复用宿主已有原生 owner。
 
-适用版本：Maven 0.1.8；HAR 0.1.6沿用原字节。远程验收以固定 Release 结果为准。本次修复与平台边界见[功能与平台差异](docs/功能与平台差异.md)，构建与渠道验收见[版本发布记录](https://github.com/gycrosskit/permission/releases/tag/0.1.8)；下方旧版本记录保留其历史范围。
+历史发布基线：Maven 0.1.8；HAR 0.1.6沿用原字节。远程验收以固定 Release 结果为准。本次修复与平台边界见[功能与平台差异](docs/功能与平台差异.md)，构建与渠道验收见[版本发布记录](https://github.com/gycrosskit/permission/releases/tag/0.1.8)；下方旧版本记录保留其历史范围。
 
 当前测试覆盖、执行时点和未验收项集中见[验证范围](docs/功能与平台差异.md#验证范围)，复现命令见[开发与验证](docs/开发与验证.md)。
 
@@ -38,6 +41,10 @@ flowchart TB
     Core --> Module[permission-kuikly<br/>PermissionModule]
     Android --> Result[ActivityResult<br/>系统权限]
     IOS --> Apple[AVFoundation<br/>CoreLocation]
+    Module --> AndroidReceiver[Android Kuikly receiver]
+    AndroidReceiver --> Android
+    Module --> IosReceiver[iOS Kuikly receiver]
+    IosReceiver --> IOS
     Module --> Native[HAR<br/>GycPermissionModule]
     Host --> Service[HAR<br/>GycPermissionService]
     Native --> Service

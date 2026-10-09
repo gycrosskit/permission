@@ -32,6 +32,8 @@ class PermissionModule : Module(), PermissionPlatform {
     }
 
     override suspend fun resumeAfterSettings(permission: AppPermission): PermissionStatus {
+        // Android 的“每次询问”和 iOS 重读策略归现有原生 owner；OHOS 保留原协议。
+        if (pageData?.isAndroid == true || pageData?.isIOS == true) return status("resumeAfterSettings", permission)
         val current = getStatus(permission)
         return if (current == PermissionStatus.NOT_DETERMINED) request(permission) else current
     }
@@ -41,7 +43,7 @@ class PermissionModule : Module(), PermissionPlatform {
             invoke(method, JSONObject().apply { put("permission", permission.name) })
         }
         return PermissionStatus.entries.firstOrNull { it.name == response?.optString("status") }
-            ?: error("Harmony permission service unavailable")
+            ?: error("Native permission service unavailable")
     }
 
     private suspend fun invoke(method: String, params: JSONObject): JSONObject? {
@@ -66,7 +68,7 @@ class PermissionModule : Module(), PermissionPlatform {
         } finally {
             continuation?.let { pending.remove(it) }
             // 只能撤销还在原生队列中的申请；已经展示的系统弹窗继续持有全局屏障。
-            if (method == "request" && !completed) {
+            if ((method == "request" || method == "resumeAfterSettings") && !completed) {
                 asyncToNativeMethod("cancelQueued", JSONObject().apply { put("requestId", requestId) }, null)
             }
             reference?.let(::removeCallback)

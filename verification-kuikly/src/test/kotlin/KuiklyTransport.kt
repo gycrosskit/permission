@@ -1,9 +1,11 @@
 package com.tencent.kuikly.core.module
 import com.tencent.kuikly.core.nvi.serialization.json.JSONObject
+import com.tencent.kuikly.core.pager.PageData
 class CallbackRef
 class NativeResult(val callbackRef: CallbackRef)
 /** 仅截获 SDK 传输；实际协程、超时、状态映射来自生产源码。 */
 open class Module {
+    var pageData: PageData? = null
     lateinit var response: (JSONObject?) -> Unit
     val calls = mutableListOf<Pair<String, String>>()
     val cancelled = mutableListOf<JSONObject>()
