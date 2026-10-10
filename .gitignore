@@ -12,3 +12,6 @@ local.properties
 .DS_Store
 ohos/**/BuildProfile.ets
 ohos/**/oh-package-lock.json5
+/scripts/ci-changes.py
+/scripts/ci-run.py
+/scripts/ci-native-cache.py

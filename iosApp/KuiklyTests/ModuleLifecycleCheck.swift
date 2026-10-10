@@ -129,7 +129,23 @@ private func checks() async {
     replies[2]("{}")
     await drainContext()
     precondition(callbackState.count == 1)
-    print("PASS: permission receiver repeated invalidate, queued call, factory race, Context callback and SDK dealloc")
+    let result = "PASS: permission receiver repeated invalidate, queued call, factory race, Context callback and SDK dealloc"
+    guard let runID = ProcessInfo.processInfo.environment["PERMISSION_CHECK_RUN_ID"],
+          UUID(uuidString: runID) != nil else {
+        fputs("ModuleCheck requires a valid run UUID\n", stderr)
+        exit(1)
+    }
+    do {
+        let documents = try FileManager.default.url(for: .documentDirectory, in: .userDomainMask,
+                                                    appropriateFor: nil, create: true)
+        let receipt = try JSONSerialization.data(withJSONObject: ["run_id": runID, "result": result])
+        // 每次运行独立文件；旧进程不能覆盖新运行的完成证据。
+        try receipt.write(to: documents.appendingPathComponent("ModuleCheck-\(runID).json"), options: .atomic)
+    } catch {
+        fputs("ModuleCheck completion receipt failed: \(error)\n", stderr)
+        exit(1)
+    }
+    print(result)
 }
 
 @main
