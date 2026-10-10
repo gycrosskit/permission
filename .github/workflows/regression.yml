@@ -104,6 +104,7 @@ jobs:
           python3 scripts/ci-run.py --log ci-diagnostics/contracts-1.log -- python3 verification/ci/test_fork_host.py
           python3 scripts/ci-run.py --log ci-diagnostics/contracts-2.log -- python3 scripts/test-check-maven.py
           python3 scripts/ci-run.py --log ci-diagnostics/contracts-3.log -- python3 scripts/test-jitpack-metadata.py
+          python3 scripts/ci-run.py --log ci-diagnostics/contracts-receipt.log -- bash scripts/verify-kuikly-module.sh --test-receipt
           TYPESCRIPT_PATH="$RUNNER_TEMP/ci-tools/node_modules/typescript" python3 scripts/ci-run.py --log ci-diagnostics/contracts-4.log -- node --test ohos/permission-native/test/permission.test.cjs
       - name: Save public CI diagnostics
         if: always()
