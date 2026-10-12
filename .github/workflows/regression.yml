@@ -102,6 +102,7 @@ jobs:
         timeout-minutes: 10
         run: |
           python3 scripts/ci-run.py --log ci-diagnostics/contracts-1.log -- python3 verification/ci/test_fork_host.py
+          python3 scripts/ci-run.py --log ci-diagnostics/contracts-cache.log -- python3 verification/ci/test_cache_contract.py
           python3 scripts/ci-run.py --log ci-diagnostics/contracts-2.log -- python3 scripts/test-check-maven.py
           python3 scripts/ci-run.py --log ci-diagnostics/contracts-3.log -- python3 scripts/test-jitpack-metadata.py
           python3 scripts/ci-run.py --log ci-diagnostics/contracts-receipt.log -- bash scripts/verify-kuikly-module.sh --test-receipt
@@ -116,6 +117,8 @@ jobs:
     if: needs.changes.outputs.source == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 45
+    env:
+      GYC_CI_BUILD_CACHE: 'true'
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
@@ -126,7 +129,10 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-          cache: gradle
+      - name: Restore Gradle dependencies and build outputs
+        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.3
+        with:
+          cache-read-only: ${{ github.event_name == 'pull_request' }}
       - run: bash scripts/ci-pin-fork-host.sh
         timeout-minutes: 5
       - run: test -f "$ANDROID_HOME/platforms/android-36/android.jar"
@@ -146,6 +152,8 @@ jobs:
     if: (needs.changes.outputs.source == 'true') || (github.event_name == 'workflow_dispatch' && inputs.warm_native_cache && github.ref == 'refs/heads/main')
     runs-on: macos-15
     timeout-minutes: 60
+    env:
+      GYC_CI_BUILD_CACHE: 'true'
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
@@ -174,7 +182,11 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-          cache: gradle
+      - name: Restore Gradle dependencies and build outputs
+        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.3
+        if: (needs.changes.outputs.source == 'true') || (github.event_name == 'workflow_dispatch' && inputs.warm_native_cache && github.ref == 'refs/heads/main')
+        with:
+          cache-read-only: ${{ github.event_name == 'pull_request' }}
       - run: bash scripts/ci-pin-fork-host.sh
         if: (needs.changes.outputs.source == 'true') || (github.event_name == 'workflow_dispatch' && inputs.warm_native_cache && github.ref == 'refs/heads/main')
         timeout-minutes: 5
