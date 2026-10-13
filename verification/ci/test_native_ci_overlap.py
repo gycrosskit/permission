@@ -25,15 +25,14 @@ if args == ['--sdk', 'iphonesimulator', '--show-sdk-path']:
 elif args[0] == 'swiftc':
     if case == 'compile_failure': sys.exit(18)
     Path(args[args.index('-o') + 1]).write_text('mock app')
-elif args[:3] == ['simctl', 'list', 'runtimes']:
-    print(json.dumps({'runtimes': [{'isAvailable': case != 'no_runtime',
-        'identifier': 'com.apple.CoreSimulator.SimRuntime.iOS-18-5',
-        'supportedDeviceTypes': [{'name': 'iPhone', 'identifier': 'mock-iPhone'}]}]}))
 elif args[:3] == ['simctl', 'list', 'devices']:
-    print(json.dumps({'devices': {'mock-runtime': [{'isAvailable': True, 'name': 'iPhone',
-        'state': 'Booted', 'udid': os.environ['MOCK_DEVICE']}]}}))
-elif args[:2] == ['simctl', 'create']:
-    print(os.environ['MOCK_DEVICE'])
+    devices = [] if case == 'no_runtime' else [{'isAvailable': True, 'name': 'iPhone',
+        'state': 'Booted' if case in ['already_booted', 'output_failure_booted'] else 'Shutdown',
+        'udid': os.environ['MOCK_DEVICE']}]
+    if case in ['already_booted', 'output_failure_booted']:
+        devices.insert(0, {'isAvailable': True, 'name': 'iPhone', 'state': 'Shutdown',
+                          'udid': '12345678-1234-1234-1234-123456789DEF'})
+    print(json.dumps({'devices': {'mock-runtime': devices}}))
 elif args[:2] == ['simctl', 'launch']:
     assert args[args.index('--terminate-running-process') + 1] == os.environ['MOCK_DEVICE']
     run_id = os.environ['SIMCTL_CHILD_PERMISSION_CHECK_RUN_ID']
@@ -45,7 +44,7 @@ elif args[:2] == ['simctl', 'launch']:
     sys.exit(19 if case == 'launch_failure' else 0)
 elif args[:2] == ['simctl', 'get_app_container']:
     print(os.environ['MOCK_CONTAINER'])
-elif args[0] == 'simctl' and args[1] in ['boot', 'bootstatus', 'install', 'shutdown', 'delete']:
+elif args[0] == 'simctl' and args[1] in ['boot', 'bootstatus', 'install', 'shutdown', 'uninstall']:
     assert args[2] == os.environ['MOCK_DEVICE']
     if {'boot_failure': 'boot', 'ready_failure': 'bootstatus', 'install_failure': 'install'}.get(case) == args[1]:
         sys.exit(20)
@@ -62,6 +61,8 @@ assert native.index('--prepare-simulator') < native.index('compileKotlinIosArm64
 assert 'if: always() && steps.module-simulator.outputs.device !=' in native
 assert native.index('--cleanup-simulator') < native.index('Save public CI diagnostics')
 assert 'KUIKLY_MODULE_SIMULATOR: ${{ steps.module-simulator.outputs.device }}' in native
+assert 'KUIKLY_MODULE_BOOTED_BY_CI: ${{ steps.module-simulator.outputs.booted_by_ci }}' in native
+assert '${KUIKLY_MODULE_BOOTED_BY_CI:?Simulator preparation did not produce an ownership flag}' in native
 assert 'python3 verification/ci/test_native_ci_overlap.py' in workflow
 block = re.search(r'      - name: Compile native Kuikly receiver with pinned SDK\n.*?        run: \|\n(.*?)(?=      - name:)', native, re.S).group(1)
 block = '\n'.join(line[10:] for line in block.splitlines())
@@ -100,14 +101,24 @@ with tempfile.TemporaryDirectory() as directory:
         return result, [c[2] for c in commands if c[:2] == ['xcrun', 'simctl']]
 
     result, sim = run('normal', '--prepare-simulator')
-    assert result.returncode == 0 and sim == ['list', 'create', 'boot']
-    assert output.read_text() == f'device={DEVICE}\n'
+    assert result.returncode == 0 and sim == ['list', 'boot']
+    assert output.read_text() == f'device={DEVICE}\nbooted_by_ci=true\n'
+    result, sim = run('already_booted', '--prepare-simulator')
+    assert result.returncode == 0 and sim == ['list']
+    assert output.read_text() == f'device={DEVICE}\nbooted_by_ci=false\n'
     for case in ['boot_failure', 'no_runtime', 'output_failure']:
         result, sim = run(case, '--prepare-simulator', output_path=temp if case == 'output_failure' else output)
         assert result.returncode != 0 and output.read_text() == '', case
-        assert sim == ['list'] if case == 'no_runtime' else sim[-2:] == ['shutdown', 'delete']
-    result, sim = run('normal', '--cleanup-simulator', DEVICE)
-    assert result.returncode == 0 and sim == ['shutdown', 'delete'], (result.returncode, sim, result.stderr)
+        assert sim == ['list'] if case == 'no_runtime' else sim[-1:] == ['shutdown']
+    result, sim = run('output_failure_booted', '--prepare-simulator', output_path=temp)
+    assert result.returncode != 0 and sim == ['list']
+    result, sim = run('normal', '--cleanup-simulator', DEVICE, 'true')
+    assert result.returncode == 0 and sim == ['uninstall', 'shutdown'], (result.returncode, sim, result.stderr)
+    for args in [(DEVICE,), (DEVICE, 'false')]:
+        result, sim = run('normal', '--cleanup-simulator', *args)
+        assert result.returncode == 0 and sim == ['uninstall']
+    result, sim = run('normal', '--cleanup-simulator', DEVICE, 'invalid')
+    assert result.returncode != 0 and not sim
     result, sim = run('normal', '--cleanup-simulator', 'booted')
     assert result.returncode != 0 and not sim
     for case in ['normal', 'compile_failure', 'sign_failure', 'ready_failure', 'install_failure',
@@ -161,4 +172,4 @@ sys.exit(23 if os.environ['MOCK_CASE'] in [name + '_failure', 'both_failure'] el
         assert len(list(folder.iterdir())) == (0 if case in ['pod_failure', 'missing_device'] else 4)
         if case not in ['pod_failure', 'missing_device']:
             assert 'Native checks: module=' in result.stdout
-print('Native CI contract: early owned boot, fresh receipt, real parallel start, both results required')
+print('Native CI contract: early reused boot, ownership-safe cleanup, fresh receipt and both parallel results required')

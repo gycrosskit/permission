@@ -191,8 +191,14 @@ jobs:
       - name: Restore Gradle dependencies and build outputs
         uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.3
         if: needs.changes.outputs.source == 'true'
+        env:
+          # shortcut: 固定版本支持此内部开关；升级 Action 时须复核。
+          GRADLE_BUILD_ACTION_SKIP_RESTORE: transforms
         with:
           cache-read-only: ${{ github.event_name == 'pull_request' }}
+          gradle-home-cache-excludes: |
+            caches/transforms-4
+            caches/*/transforms
       - run: bash scripts/ci-pin-fork-host.sh
         if: (needs.changes.outputs.source == 'true') || (github.event_name == 'workflow_dispatch' && inputs.warm_native_cache && github.ref == 'refs/heads/main')
         timeout-minutes: 5
@@ -230,7 +236,8 @@ jobs:
         timeout-minutes: 5
         env:
           KUIKLY_MODULE_SIMULATOR: ${{ steps.module-simulator.outputs.device }}
-        run: python3 scripts/ci-run.py --log ci-diagnostics/native-simulator-cleanup.log -- bash scripts/verify-kuikly-module.sh --cleanup-simulator "$KUIKLY_MODULE_SIMULATOR"
+          KUIKLY_MODULE_BOOTED_BY_CI: ${{ steps.module-simulator.outputs.booted_by_ci }}
+        run: python3 scripts/ci-run.py --log ci-diagnostics/native-simulator-cleanup.log -- bash scripts/verify-kuikly-module.sh --cleanup-simulator "$KUIKLY_MODULE_SIMULATOR" "${KUIKLY_MODULE_BOOTED_BY_CI:?Simulator preparation did not produce an ownership flag}"
       - name: Warm trusted main Native cache
         if: (github.event_name == 'workflow_dispatch' && inputs.warm_native_cache && github.ref == 'refs/heads/main') && steps.konan-cache.outputs.cache-hit != 'true'
         timeout-minutes: 40

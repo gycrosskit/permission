@@ -52,15 +52,20 @@ if [[ "${1:-}" == --test-receipt ]]; then
     exit 0
 fi
 simulator=
-own_simulator=false
+booted_by_ci=false
+cleanup_app=false
 phase() {
     printf 'MODULE_PHASE %s elapsed_seconds=%s utc=%s\n' "$1" "$SECONDS" "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 }
 cleanup() {
-    if [[ "$own_simulator" == true && -n "$simulator" ]]; then
+    if [[ -n "$simulator" && ( "$booted_by_ci" == true || "$cleanup_app" == true ) ]]; then
         phase cleanup.start
-        xcrun simctl shutdown "$simulator" || true
-        xcrun simctl delete "$simulator" || true
+        if [[ "$cleanup_app" == true ]]; then
+            xcrun simctl uninstall "$simulator" io.github.gycrosskit.permission.module-check || true
+        fi
+        if [[ "$booted_by_ci" == true ]]; then
+            xcrun simctl shutdown "$simulator" || true
+        fi
         phase cleanup.end
     fi
 }
@@ -68,33 +73,34 @@ trap cleanup EXIT
 case "${1:-}" in
     --prepare-simulator)
         : "${GITHUB_OUTPUT:?Simulator preparation requires a GitHub step output file}"
-        own_simulator=true
-        phase simulator.create.start
-        read -r runtime device_type < <(xcrun simctl list runtimes -j | python3 -c '
+        phase simulator.select.start
+        read -r simulator booted_by_ci < <(xcrun simctl list devices available -j | python3 -c '
 import json, sys
-for runtime in json.load(sys.stdin)["runtimes"]:
-    if not runtime.get("isAvailable") or not runtime["identifier"].startswith("com.apple.CoreSimulator.SimRuntime.iOS"):
-        continue
-    for device_type in runtime.get("supportedDeviceTypes", []):
-        if device_type["name"].startswith("iPhone"):
-            print(runtime["identifier"], device_type["identifier"])
-            sys.exit(0)
-sys.exit("No available iOS runtime with a supported iPhone device type")
+devices = [d for rows in json.load(sys.stdin)["devices"].values() for d in rows
+           if d.get("isAvailable") and d["name"].startswith("iPhone")
+           and d["state"] in ("Booted", "Shutdown")]
+if not devices:
+    sys.exit("No available iPhone simulator")
+device = next((d for d in devices if d["state"] == "Booted"), devices[0])
+print(device["udid"], "false" if device["state"] == "Booted" else "true")
 ')
-        simulator=$(xcrun simctl create GYCPermissionLifecycle "$device_type" "$runtime")
-        phase simulator.create.end
-        phase simulator.boot.start
-        xcrun simctl boot "$simulator"
-        phase simulator.boot.end
-        printf 'device=%s\n' "$simulator" >> "$GITHUB_OUTPUT"
-        # 交给 CI 的 always 清理步骤；不等待 ready，让启动与编译重叠。
-        own_simulator=false
+        phase simulator.select.end
+        if [[ "$booted_by_ci" == true ]]; then
+            phase simulator.boot.start
+            xcrun simctl boot "$simulator"
+            phase simulator.boot.end
+        fi
+        printf 'device=%s\nbooted_by_ci=%s\n' "$simulator" "$booted_by_ci" >> "$GITHUB_OUTPUT"
+        # CI 接管本轮启动的设备；已有 Booted 设备不关机，也不删除 runner 预置设备。
+        booted_by_ci=false
         exit 0
         ;;
     --cleanup-simulator)
         simulator=${2:?A prepared simulator UUID is required}
         [[ "$simulator" =~ ^[[:xdigit:]]{8}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{12}$ ]] || { simulator=; echo 'Invalid simulator UUID' >&2; exit 1; }
-        own_simulator=true
+        booted_by_ci=${3:-false}
+        [[ "$booted_by_ci" == true || "$booted_by_ci" == false ]] || { simulator=; echo 'Invalid simulator ownership flag' >&2; exit 1; }
+        cleanup_app=true
         exit 0
         ;;
 esac
