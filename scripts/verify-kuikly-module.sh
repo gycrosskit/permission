@@ -51,6 +51,53 @@ if [[ "${1:-}" == --test-receipt ]]; then
     verify_receipt --test
     exit 0
 fi
+simulator=
+own_simulator=false
+phase() {
+    printf 'MODULE_PHASE %s elapsed_seconds=%s utc=%s\n' "$1" "$SECONDS" "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+}
+cleanup() {
+    if [[ "$own_simulator" == true && -n "$simulator" ]]; then
+        phase cleanup.start
+        xcrun simctl shutdown "$simulator" || true
+        xcrun simctl delete "$simulator" || true
+        phase cleanup.end
+    fi
+}
+trap cleanup EXIT
+case "${1:-}" in
+    --prepare-simulator)
+        : "${GITHUB_OUTPUT:?Simulator preparation requires a GitHub step output file}"
+        own_simulator=true
+        phase simulator.create.start
+        read -r runtime device_type < <(xcrun simctl list runtimes -j | python3 -c '
+import json, sys
+for runtime in json.load(sys.stdin)["runtimes"]:
+    if not runtime.get("isAvailable") or not runtime["identifier"].startswith("com.apple.CoreSimulator.SimRuntime.iOS"):
+        continue
+    for device_type in runtime.get("supportedDeviceTypes", []):
+        if device_type["name"].startswith("iPhone"):
+            print(runtime["identifier"], device_type["identifier"])
+            sys.exit(0)
+sys.exit("No available iOS runtime with a supported iPhone device type")
+')
+        simulator=$(xcrun simctl create GYCPermissionLifecycle "$device_type" "$runtime")
+        phase simulator.create.end
+        phase simulator.boot.start
+        xcrun simctl boot "$simulator"
+        phase simulator.boot.end
+        printf 'device=%s\n' "$simulator" >> "$GITHUB_OUTPUT"
+        # 交给 CI 的 always 清理步骤；不等待 ready，让启动与编译重叠。
+        own_simulator=false
+        exit 0
+        ;;
+    --cleanup-simulator)
+        simulator=${2:?A prepared simulator UUID is required}
+        [[ "$simulator" =~ ^[[:xdigit:]]{8}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{12}$ ]] || { simulator=; echo 'Invalid simulator UUID' >&2; exit 1; }
+        own_simulator=true
+        exit 0
+        ;;
+esac
 products=${1:?Pass the real Simulator Pod build Products directory}
 test -f "$products/GycPermissionKuikly.framework/GycPermissionKuikly"
 test -f "$products/OpenKuiklyIOSRender.framework/OpenKuiklyIOSRender"
@@ -58,7 +105,9 @@ output="$PWD/build/kuikly-module-check"
 app="$output/ModuleCheck.app"
 mkdir -p "$app/Frameworks"
 cp -R "$products/GycPermissionKuikly.framework" "$products/OpenKuiklyIOSRender.framework" "$app/Frameworks/"
+phase compile.start
 xcrun swiftc -parse-as-library -target "$(uname -m)-apple-ios15.0-simulator"   -sdk "$(xcrun --sdk iphonesimulator --show-sdk-path)" -F "$products"   -framework GycPermissionKuikly -framework OpenKuiklyIOSRender   -Xlinker -rpath -Xlinker @executable_path/Frameworks   iosApp/KuiklyTests/ModuleLifecycleCheck.swift -o "$app/ModuleCheck"
+phase compile.end
 cat > "$app/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -72,14 +121,21 @@ cat > "$app/Info.plist" <<'PLIST'
 <key>LSRequiresIPhoneOS</key><true/>
 </dict></plist>
 PLIST
+phase sign.start
 codesign --force --sign - "$app/Frameworks/GycPermissionKuikly.framework" "$app/Frameworks/OpenKuiklyIOSRender.framework" "$app" >/dev/null
+phase sign.end
 simulator=${KUIKLY_MODULE_SIMULATOR:-$(xcrun simctl list devices available -j | python3 -c 'import json,sys; devices=[d for rows in json.load(sys.stdin)["devices"].values() for d in rows if d.get("isAvailable") and d["name"].startswith("iPhone")]; print(next((d for d in devices if d["state"]=="Booted"), devices[0])["udid"])')}
+phase simulator.ready.start
 xcrun simctl bootstatus "$simulator" -b
+phase simulator.ready.end
+phase install.start
 xcrun simctl install "$simulator" "$app"
+phase install.end
 touch "$output/launch-start"
 run_id=$(uuidgen)
 mkdir -p ci-diagnostics
 launch_status=0
+phase launch.start
 SIMCTL_CHILD_PERMISSION_CHECK_RUN_ID="$run_id" xcrun simctl launch --console --terminate-running-process "$simulator" io.github.gycrosskit.permission.module-check 2>&1 | tee "$output/result.log" || launch_status=$?
 cp "$output/result.log" "ci-diagnostics/permission-module-$run_id.log"
 echo "ModuleCheck launch pipeline exit: $launch_status"
@@ -107,3 +163,4 @@ for report in sorted(reports, key=lambda p: p.stat().st_mtime_ns, reverse=True)[
 CRASH_REPORTS
     exit 1
 fi
+phase receipt.pass
