@@ -8,16 +8,20 @@ case "$(uname -m)" in
   *) echo "Unsupported macOS architecture" >&2; exit 1 ;;
 esac
 # 只在仓库内 staging 写入当前源码候选；不触发远程发布。
+printf 'ASSEMBLY_PHASE staging.start utc=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" \
   :permission-core:publishKotlinMultiplatformPublicationToStagingRepository \
   :permission-core:publish${target}PublicationToStagingRepository \
   :permission-kuikly:publishKotlinMultiplatformPublicationToStagingRepository \
   :permission-kuikly:publish${target}PublicationToStagingRepository \
-  --no-daemon --max-workers=1
+  --info --no-daemon --max-workers=1
+printf 'ASSEMBLY_PHASE consumer.start utc=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" -p verification-consumer \
   linkDebugFramework${target} -PpermissionMavenRepo="$PWD/build/maven" \
-  -PkuiklyRenderFrameworkDir="$products" --no-daemon --max-workers=1
+  -PkuiklyRenderFrameworkDir="$products" --info --no-daemon --max-workers=1
+printf 'ASSEMBLY_PHASE swift-typecheck.start utc=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 xcrun swiftc -typecheck -target "$(uname -m)-apple-ios15.0-simulator" \
   -sdk "$(xcrun --sdk iphonesimulator --show-sdk-path)" -F "$products" \
   -F "verification-consumer/build/bin/$directory/debugFramework" \
   verification-consumer/NativeModuleAssembly.swift
+printf 'ASSEMBLY_PHASE complete utc=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
