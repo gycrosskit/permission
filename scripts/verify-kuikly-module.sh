@@ -51,6 +51,59 @@ if [[ "${1:-}" == --test-receipt ]]; then
     verify_receipt --test
     exit 0
 fi
+simulator=
+booted_by_ci=false
+cleanup_app=false
+phase() {
+    printf 'MODULE_PHASE %s elapsed_seconds=%s utc=%s\n' "$1" "$SECONDS" "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+}
+cleanup() {
+    if [[ -n "$simulator" && ( "$booted_by_ci" == true || "$cleanup_app" == true ) ]]; then
+        phase cleanup.start
+        if [[ "$cleanup_app" == true ]]; then
+            xcrun simctl uninstall "$simulator" io.github.gycrosskit.permission.module-check || true
+        fi
+        if [[ "$booted_by_ci" == true ]]; then
+            xcrun simctl shutdown "$simulator" || true
+        fi
+        phase cleanup.end
+    fi
+}
+trap cleanup EXIT
+case "${1:-}" in
+    --prepare-simulator)
+        : "${GITHUB_OUTPUT:?Simulator preparation requires a GitHub step output file}"
+        phase simulator.select.start
+        read -r simulator booted_by_ci < <(xcrun simctl list devices available -j | python3 -c '
+import json, sys
+devices = [d for rows in json.load(sys.stdin)["devices"].values() for d in rows
+           if d.get("isAvailable") and d["name"].startswith("iPhone")
+           and d["state"] in ("Booted", "Shutdown")]
+if not devices:
+    sys.exit("No available iPhone simulator")
+device = next((d for d in devices if d["state"] == "Booted"), devices[0])
+print(device["udid"], "false" if device["state"] == "Booted" else "true")
+')
+        phase simulator.select.end
+        if [[ "$booted_by_ci" == true ]]; then
+            phase simulator.boot.start
+            xcrun simctl boot "$simulator"
+            phase simulator.boot.end
+        fi
+        printf 'device=%s\nbooted_by_ci=%s\n' "$simulator" "$booted_by_ci" >> "$GITHUB_OUTPUT"
+        # CI 接管本轮启动的设备；已有 Booted 设备不关机，也不删除 runner 预置设备。
+        booted_by_ci=false
+        exit 0
+        ;;
+    --cleanup-simulator)
+        simulator=${2:?A prepared simulator UUID is required}
+        [[ "$simulator" =~ ^[[:xdigit:]]{8}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{12}$ ]] || { simulator=; echo 'Invalid simulator UUID' >&2; exit 1; }
+        booted_by_ci=${3:-false}
+        [[ "$booted_by_ci" == true || "$booted_by_ci" == false ]] || { simulator=; echo 'Invalid simulator ownership flag' >&2; exit 1; }
+        cleanup_app=true
+        exit 0
+        ;;
+esac
 products=${1:?Pass the real Simulator Pod build Products directory}
 test -f "$products/GycPermissionKuikly.framework/GycPermissionKuikly"
 test -f "$products/OpenKuiklyIOSRender.framework/OpenKuiklyIOSRender"
@@ -58,7 +111,9 @@ output="$PWD/build/kuikly-module-check"
 app="$output/ModuleCheck.app"
 mkdir -p "$app/Frameworks"
 cp -R "$products/GycPermissionKuikly.framework" "$products/OpenKuiklyIOSRender.framework" "$app/Frameworks/"
+phase compile.start
 xcrun swiftc -parse-as-library -target "$(uname -m)-apple-ios15.0-simulator"   -sdk "$(xcrun --sdk iphonesimulator --show-sdk-path)" -F "$products"   -framework GycPermissionKuikly -framework OpenKuiklyIOSRender   -Xlinker -rpath -Xlinker @executable_path/Frameworks   iosApp/KuiklyTests/ModuleLifecycleCheck.swift -o "$app/ModuleCheck"
+phase compile.end
 cat > "$app/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -72,14 +127,21 @@ cat > "$app/Info.plist" <<'PLIST'
 <key>LSRequiresIPhoneOS</key><true/>
 </dict></plist>
 PLIST
+phase sign.start
 codesign --force --sign - "$app/Frameworks/GycPermissionKuikly.framework" "$app/Frameworks/OpenKuiklyIOSRender.framework" "$app" >/dev/null
+phase sign.end
 simulator=${KUIKLY_MODULE_SIMULATOR:-$(xcrun simctl list devices available -j | python3 -c 'import json,sys; devices=[d for rows in json.load(sys.stdin)["devices"].values() for d in rows if d.get("isAvailable") and d["name"].startswith("iPhone")]; print(next((d for d in devices if d["state"]=="Booted"), devices[0])["udid"])')}
+phase simulator.ready.start
 xcrun simctl bootstatus "$simulator" -b
+phase simulator.ready.end
+phase install.start
 xcrun simctl install "$simulator" "$app"
+phase install.end
 touch "$output/launch-start"
 run_id=$(uuidgen)
 mkdir -p ci-diagnostics
 launch_status=0
+phase launch.start
 SIMCTL_CHILD_PERMISSION_CHECK_RUN_ID="$run_id" xcrun simctl launch --console --terminate-running-process "$simulator" io.github.gycrosskit.permission.module-check 2>&1 | tee "$output/result.log" || launch_status=$?
 cp "$output/result.log" "ci-diagnostics/permission-module-$run_id.log"
 echo "ModuleCheck launch pipeline exit: $launch_status"
@@ -107,3 +169,4 @@ for report in sorted(reports, key=lambda p: p.stat().st_mtime_ns, reverse=True)[
 CRASH_REPORTS
     exit 1
 fi
+phase receipt.pass
