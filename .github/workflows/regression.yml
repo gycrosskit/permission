@@ -106,6 +106,7 @@ jobs:
           python3 scripts/ci-run.py --log ci-diagnostics/contracts-2.log -- python3 scripts/test-check-maven.py
           python3 scripts/ci-run.py --log ci-diagnostics/contracts-3.log -- python3 scripts/test-jitpack-metadata.py
           python3 scripts/ci-run.py --log ci-diagnostics/contracts-receipt.log -- bash scripts/verify-kuikly-module.sh --test-receipt
+          python3 scripts/ci-run.py --log ci-diagnostics/contracts-native-ci.log -- python3 verification/ci/test_native_ci_overlap.py
           TYPESCRIPT_PATH="$RUNNER_TEMP/ci-tools/node_modules/typescript" python3 scripts/ci-run.py --log ci-diagnostics/contracts-4.log -- node --test ohos/permission-native/test/permission.test.cjs
       - name: Save public CI diagnostics
         if: always()
@@ -160,6 +161,11 @@ jobs:
           persist-credentials: false
       - name: Install shared CI tools
         uses: gycrosskit/.github/actions/ci-tools@607ff44db144c68fc6523de38c04aac29e427b68
+      - name: Start lifecycle simulator before compilation
+        if: needs.changes.outputs.source == 'true'
+        id: module-simulator
+        timeout-minutes: 5
+        run: python3 scripts/ci-run.py --log ci-diagnostics/native-simulator-prepare.log -- bash scripts/verify-kuikly-module.sh --prepare-simulator
       - name: Identify Native toolchain and Xcode
         if: (needs.changes.outputs.source == 'true') || (github.event_name == 'workflow_dispatch' && inputs.warm_native_cache && github.ref == 'refs/heads/main')
         id: native-key
@@ -177,6 +183,17 @@ jobs:
             !~/.konan/**/*.tmp
             !~/.konan/**/*.lock
           key: ${{ steps.native-key.outputs.key }}
+      - name: Restore commonized platform libraries
+        if: needs.changes.outputs.source == 'true'
+        id: commonized-cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.konan/kotlin-native-prebuilt-*/klib/commonized
+            !~/.konan/**/*.lock
+            !~/.konan/**/*.part
+            !~/.konan/**/*.tmp
+          key: permission-commonized-v1-${{ steps.native-key.outputs.key }}-${{ hashFiles('gradle/native-toolchain.properties', 'gradle/libs.versions.toml', 'gradle.properties', 'settings.gradle.kts', '**/build.gradle.kts') }}
       - uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
         if: (needs.changes.outputs.source == 'true') || (github.event_name == 'workflow_dispatch' && inputs.warm_native_cache && github.ref == 'refs/heads/main')
         with:
@@ -202,10 +219,30 @@ jobs:
       - name: Compile native Kuikly receiver with pinned SDK
         if: needs.changes.outputs.source == 'true'
         timeout-minutes: 30
+        env:
+          KUIKLY_MODULE_SIMULATOR: ${{ steps.module-simulator.outputs.device }}
         run: |
+          : "${KUIKLY_MODULE_SIMULATOR:?Simulator preparation did not produce a device}"
           products=$(bash scripts/ci-build-kuikly-render.sh "$RUNNER_TEMP/permission-native-render" GycPermissionKuikly/Kuikly)
-          python3 scripts/ci-run.py --no-progress-seconds 300 --log ci-diagnostics/native-module.log -- bash scripts/verify-kuikly-module.sh "$products"
-          python3 scripts/ci-run.py --no-progress-seconds 300 --log ci-diagnostics/native-assembly.log -- bash scripts/verify-kuikly-assembly.sh "$products"
+          # 两项只读同一 Products，输出独立；等待并检查两项结果，不以先完成者代替完整门禁。
+          python3 scripts/ci-run.py --no-progress-seconds 300 --log ci-diagnostics/native-module.log -- bash scripts/verify-kuikly-module.sh "$products" &
+          module_pid=$!
+          python3 scripts/ci-run.py --no-progress-seconds 300 --log ci-diagnostics/native-assembly.log -- bash scripts/verify-kuikly-assembly.sh "$products" &
+          assembly_pid=$!
+          module_status=0
+          assembly_status=0
+          wait "$module_pid" || module_status=$?
+          wait "$assembly_pid" || assembly_status=$?
+          printf 'Native checks: module=%s assembly=%s\n' "$module_status" "$assembly_status"
+          test "$module_status" -eq 0
+          test "$assembly_status" -eq 0
+      - name: Clean up lifecycle simulator
+        if: always() && steps.module-simulator.outputs.device != ''
+        timeout-minutes: 5
+        env:
+          KUIKLY_MODULE_SIMULATOR: ${{ steps.module-simulator.outputs.device }}
+          KUIKLY_MODULE_BOOTED_BY_CI: ${{ steps.module-simulator.outputs.booted_by_ci }}
+        run: python3 scripts/ci-run.py --log ci-diagnostics/native-simulator-cleanup.log -- bash scripts/verify-kuikly-module.sh --cleanup-simulator "$KUIKLY_MODULE_SIMULATOR" "${KUIKLY_MODULE_BOOTED_BY_CI:?Simulator preparation did not produce an ownership flag}"
       - name: Warm trusted main Native cache
         if: (github.event_name == 'workflow_dispatch' && inputs.warm_native_cache && github.ref == 'refs/heads/main') && steps.konan-cache.outputs.cache-hit != 'true'
         timeout-minutes: 40
@@ -222,11 +259,42 @@ jobs:
             !~/.konan/**/*.tmp
             !~/.konan/**/*.lock
           key: ${{ steps.konan-cache.outputs.cache-primary-key }}
+      - name: Check commonized cache completeness
+        if: success() && needs.changes.outputs.source == 'true' && github.event_name != 'pull_request' && steps.commonized-cache.outputs.cache-hit != 'true'
+        id: commonized-ready
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          import platform
+
+          version = next(line.split('=', 1)[1] for line in Path('gradle/native-toolchain.properties').read_text().splitlines() if line.startswith('kotlin='))
+          arch = {'arm64': 'aarch64', 'x86_64': 'x86_64'}[platform.machine()]
+          root = Path.home() / '.konan' / f'kotlin-native-prebuilt-macos-{arch}-{version}' / 'klib/commonized' / version
+          targets = ['(ios_arm64, ios_simulator_arm64, ios_x64)', '(ios_arm64, ios_simulator_arm64, ios_x64, ohos_arm64)']
+          ready = all((root / target / '.success').is_file() for target in targets)
+          print(f'Commonized cache complete: {ready}; directory={root}')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write(f'ready={str(ready).lower()}\n')
+          PY
+      - name: Save commonized platform libraries
+        if: success() && steps.commonized-ready.outputs.ready == 'true' && github.event_name != 'pull_request' && steps.commonized-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.konan/kotlin-native-prebuilt-*/klib/commonized
+            !~/.konan/**/*.lock
+            !~/.konan/**/*.part
+            !~/.konan/**/*.tmp
+          key: ${{ steps.commonized-cache.outputs.cache-primary-key }}
       - name: Save public CI diagnostics
         if: always()
         uses: gycrosskit/.github/actions/ci-diagnostics@607ff44db144c68fc6523de38c04aac29e427b68
         with:
           status: ${{ job.status }}
+          extra-paths: |
+            build/reports/profile/**
+            verification-consumer/build/reports/profile/**
   release-android:
     needs: verify-public
     if: always() && (github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.version != ''))
