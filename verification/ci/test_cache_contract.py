@@ -18,10 +18,8 @@ for name in ('android', 'native'):
         cache_step = re.search(r'uses: gradle/actions/setup-gradle@[^\n]+\n        if: ([^\n]+)', job)
         assert cache_step and cache_step.group(1) == "needs.changes.outputs.source == 'true'"
     assert 'cache: gradle' not in job, 'Do not restore Gradle User Home twice'
-assert 'GRADLE_BUILD_ACTION_SKIP_RESTORE' not in jobs['android']
-assert 'GRADLE_BUILD_ACTION_SKIP_RESTORE: transforms' in jobs['native']
-assert 'gradle-home-cache-excludes:' in jobs['native']
-assert 'caches/transforms-4' in jobs['native'] and 'caches/*/transforms' in jobs['native']
+assert 'GRADLE_BUILD_ACTION_SKIP_RESTORE' not in workflow
+assert 'gradle-home-cache-excludes:' not in jobs['native']
 for path in ('caches/build-cache-1', 'caches/modules-2', 'wrapper/dists'):
     assert path not in jobs['native'], 'Keep compiler outputs, dependencies and Wrapper caches'
 for name in ('release-android', 'release-native'):
