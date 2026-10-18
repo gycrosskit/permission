@@ -5,7 +5,7 @@
 
 ## 当前功能与平台边界
 
-core 提供相机、麦克风、前台定位的五种权限状态及申请/恢复；无CMP UI模块，permission-kuikly包含三端 Module 与 Android/iOS receiver，复用宿主已有原生 owner。
+core 提供相机、麦克风、前台定位的五种权限状态及申请/恢复；不提供页面 UI，permission-kuikly包含三端 Module 与 Android/iOS receiver，复用宿主已有原生 owner。
 
 历史发布基线：Maven 0.1.8；HAR 0.1.6沿用原字节。远程验收以固定 Release 结果为准。本次修复与平台边界见[功能与平台差异](docs/功能与平台差异.md)，构建与渠道验收见[版本发布记录](https://github.com/gycrosskit/permission/releases/tag/0.1.8)；下方旧版本记录保留其历史范围。
 
