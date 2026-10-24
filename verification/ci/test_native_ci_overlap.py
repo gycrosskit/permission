@@ -12,12 +12,16 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[2]
 DEVICE = '12345678-1234-1234-1234-123456789ABC'
 PASS = 'PASS: permission receiver repeated invalidate, queued call, factory race, Context callback and SDK dealloc'
-MOCK = r'''import json, os, sys
+MOCK = r'''import json, os, sys, uuid
 from pathlib import Path
 args = sys.argv[1:]
 with open(os.environ['MOCK_CALLS'], 'a') as f:
     f.write(json.dumps([Path(sys.argv[0]).name, *args]) + '\n')
 case = os.environ['MOCK_CASE']
+if Path(sys.argv[0]).name == 'uuidgen':
+    assert not args
+    print(str(uuid.uuid4()).upper())
+    sys.exit(0)
 if Path(sys.argv[0]).name == 'codesign':
     sys.exit(17 if case == 'sign_failure' else 0)
 if args == ['--sdk', 'iphonesimulator', '--show-sdk-path']:
@@ -82,7 +86,7 @@ with tempfile.TemporaryDirectory() as directory:
     (container / 'Documents').mkdir(parents=True)
     bin_dir = temp / 'bin'
     bin_dir.mkdir()
-    for name in ['xcrun', 'codesign']:
+    for name in ['xcrun', 'codesign', 'uuidgen']:
         tool = bin_dir / name
         tool.write_text('#!' + sys.executable + '\n' + MOCK)
         tool.chmod(0o755)
@@ -98,6 +102,8 @@ with tempfile.TemporaryDirectory() as directory:
         result = subprocess.run(['bash', str(script), *args], env=env,
                                 capture_output=True, text=True, timeout=15)
         commands = [json.loads(line) for line in calls.read_text().splitlines()]
+        if case == 'normal' and args == (str(products),):
+            assert commands.count(['uuidgen']) == 1
         return result, [c[2] for c in commands if c[:2] == ['xcrun', 'simctl']]
 
     result, sim = run('normal', '--prepare-simulator')
