@@ -1,6 +1,6 @@
 Pod::Spec.new do |spec|
   spec.name = 'GycPermissionKuikly'
-  spec.version = '0.1.9'
+  spec.version = '1.0.0'
   spec.summary = 'GY CrossKit permission Kuikly native receiver.'
   spec.homepage = 'https://github.com/gycrosskit/permission'
   spec.license = { :type => 'Apache-2.0', :file => 'LICENSE' }
@@ -11,6 +11,6 @@ Pod::Spec.new do |spec|
   spec.default_subspec = 'Kuikly'
   spec.subspec 'Kuikly' do |kuikly|
     kuikly.source_files = 'iosApp/Sources/GycPermissionKuikly/*.swift'
-    kuikly.dependency 'OpenKuiklyIOSRender', '2.28.0'
+    kuikly.dependency 'OpenKuiklyIOSRender', '2.29.1'
   end
 end
