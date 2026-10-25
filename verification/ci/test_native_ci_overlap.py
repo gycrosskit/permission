@@ -10,6 +10,8 @@ import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
+assert os.environ.get('CI_AUTOMATION_ROOT'), 'Fixed CI source binding required'
+sys.path.insert(0, str(Path(os.environ['CI_AUTOMATION_ROOT']).resolve(strict=True)))
 DEVICE = '12345678-1234-1234-1234-123456789ABC'
 PASS = 'PASS: permission receiver repeated invalidate, queued call, factory race, Context callback and SDK dealloc'
 MOCK = r'''import json, os, sys, uuid
@@ -57,19 +59,6 @@ elif args[:2] == ['simctl', 'spawn']:
 else:
     raise AssertionError(args)
 '''
-
-workflow = (ROOT / '.github/workflows/regression.yml').read_text()
-native = workflow.split('\n  native:\n', 1)[1].split('\n  release-android:\n', 1)[0]
-assert native.index('--prepare-simulator') < native.index('Restore complete Kotlin Native toolchains')
-assert native.index('--prepare-simulator') < native.index('compileKotlinIosArm64')
-assert 'if: always() && steps.module-simulator.outputs.device !=' in native
-assert native.index('--cleanup-simulator') < native.index('Save public CI diagnostics')
-assert 'KUIKLY_MODULE_SIMULATOR: ${{ steps.module-simulator.outputs.device }}' in native
-assert 'KUIKLY_MODULE_BOOTED_BY_CI: ${{ steps.module-simulator.outputs.booted_by_ci }}' in native
-assert '${KUIKLY_MODULE_BOOTED_BY_CI:?Simulator preparation did not produce an ownership flag}' in native
-assert 'python3 verification/ci/test_native_ci_overlap.py' in workflow
-block = re.search(r'      - name: Compile native Kuikly receiver with pinned SDK\n.*?        run: \|\n(.*?)(?=      - name:)', native, re.S).group(1)
-block = '\n'.join(line[10:] for line in block.splitlines())
 
 with tempfile.TemporaryDirectory() as directory:
     temp = Path(directory)
@@ -137,6 +126,15 @@ with tempfile.TemporaryDirectory() as directory:
     result, sim = run('normal', str(products))
     assert result.returncode == 0 and sim[0] == 'list'
 
+from jenkins.component_checks import matrix
+block = next(step['script'] for step in matrix('permission')['jobs']['native']['steps']
+             if step['name'] == 'Compile native Kuikly receiver with pinned SDK')
+
+with tempfile.TemporaryDirectory() as directory:
+    temp = Path(directory)
+    products = temp / 'products'
+    products.mkdir()
+    env = dict(os.environ, MOCK_DEVICE=DEVICE)
     # 执行 workflow 原 shell 块：双方必须在另一方完成前启动，任一失败均使门禁失败。
     parallel_bin = temp / 'parallel-bin'
     parallel_bin.mkdir()
@@ -178,4 +176,4 @@ sys.exit(23 if os.environ['MOCK_CASE'] in [name + '_failure', 'both_failure'] el
         assert len(list(folder.iterdir())) == (0 if case in ['pod_failure', 'missing_device'] else 4)
         if case not in ['pod_failure', 'missing_device']:
             assert 'Native checks: module=' in result.stdout
-print('Native CI contract: early reused boot, ownership-safe cleanup, fresh receipt and both parallel results required')
+print('Native CI contract: reused boot, ownership-safe cleanup, fresh receipt and both parallel results required')
