@@ -10,6 +10,8 @@ import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
+assert os.environ.get('CI_AUTOMATION_ROOT'), 'Fixed CI source binding required'
+sys.path.insert(0, str(Path(os.environ['CI_AUTOMATION_ROOT']).resolve(strict=True)))
 DEVICE = '12345678-1234-1234-1234-123456789ABC'
 PASS = 'PASS: permission receiver repeated invalidate, queued call, factory race, Context callback and SDK dealloc'
 MOCK = r'''import json, os, sys, uuid
@@ -124,4 +126,54 @@ with tempfile.TemporaryDirectory() as directory:
     result, sim = run('normal', str(products))
     assert result.returncode == 0 and sim[0] == 'list'
 
-print('Native module contract: reused boot, ownership-safe cleanup and fresh receipt')
+from jenkins.component_checks import matrix
+block = next(step['script'] for step in matrix('permission')['jobs']['native']['steps']
+             if step['name'] == 'Compile native Kuikly receiver with pinned SDK')
+
+with tempfile.TemporaryDirectory() as directory:
+    temp = Path(directory)
+    products = temp / 'products'
+    products.mkdir()
+    env = dict(os.environ, MOCK_DEVICE=DEVICE)
+    # 执行 workflow 原 shell 块：双方必须在另一方完成前启动，任一失败均使门禁失败。
+    parallel_bin = temp / 'parallel-bin'
+    parallel_bin.mkdir()
+    bash = parallel_bin / 'bash'
+    bash.write_text('#!' + sys.executable + '\nimport os, sys\n'
+                    'assert sys.argv[1] == "scripts/ci-build-kuikly-render.sh"\n'
+                    'if os.environ["MOCK_CASE"] == "pod_failure": sys.exit(21)\n'
+                    'print(os.environ["MOCK_PRODUCTS"])\n')
+    bash.chmod(0o755)
+    python = parallel_bin / 'python3'
+    python.write_text('#!' + sys.executable + '\n' + r'''import os, sys, time
+from pathlib import Path
+args = sys.argv[1:]
+assert args[:3] == ['scripts/ci-run.py', '--no-progress-seconds', '300']
+name = 'module' if 'scripts/verify-kuikly-module.sh' in args else 'assembly'
+assert args[-1] == os.environ['MOCK_PRODUCTS']
+assert os.environ['KUIKLY_MODULE_SIMULATOR'] == os.environ['MOCK_DEVICE']
+folder = Path(os.environ['MOCK_PARALLEL'])
+(folder / (name + '.start')).touch()
+other = 'assembly' if name == 'module' else 'module'
+deadline = time.monotonic() + 4
+while not (folder / (other + '.start')).exists():
+    if time.monotonic() > deadline: sys.exit(22)
+    time.sleep(0.01)
+time.sleep(0.05)
+(folder / (name + '.done')).touch()
+sys.exit(23 if os.environ['MOCK_CASE'] in [name + '_failure', 'both_failure'] else 0)
+''')
+    python.chmod(0o755)
+    for case in ['normal', 'module_failure', 'assembly_failure', 'both_failure', 'pod_failure', 'missing_device']:
+        folder = temp / case
+        folder.mkdir()
+        parallel_env = dict(env, PATH=str(parallel_bin) + os.pathsep + os.environ['PATH'],
+                            KUIKLY_MODULE_SIMULATOR='' if case == 'missing_device' else DEVICE,
+                            MOCK_CASE=case, MOCK_PRODUCTS=str(products), MOCK_PARALLEL=str(folder), RUNNER_TEMP=str(temp))
+        result = subprocess.run(['/bin/bash', '-e', '-o', 'pipefail', '-c', block], env=parallel_env,
+                                capture_output=True, text=True, timeout=8)
+        assert (result.returncode == 0) == (case == 'normal'), (case, result.stderr)
+        assert len(list(folder.iterdir())) == (0 if case in ['pod_failure', 'missing_device'] else 4)
+        if case not in ['pod_failure', 'missing_device']:
+            assert 'Native checks: module=' in result.stdout
+print('Native CI contract: reused boot, ownership-safe cleanup, fresh receipt and both parallel results required')
