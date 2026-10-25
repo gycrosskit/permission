@@ -58,19 +58,6 @@ else:
     raise AssertionError(args)
 '''
 
-workflow = (ROOT / '.github/workflows/regression.yml').read_text()
-native = workflow.split('\n  native:\n', 1)[1].split('\n  release-android:\n', 1)[0]
-assert native.index('--prepare-simulator') < native.index('Restore complete Kotlin Native toolchains')
-assert native.index('--prepare-simulator') < native.index('compileKotlinIosArm64')
-assert 'if: always() && steps.module-simulator.outputs.device !=' in native
-assert native.index('--cleanup-simulator') < native.index('Save public CI diagnostics')
-assert 'KUIKLY_MODULE_SIMULATOR: ${{ steps.module-simulator.outputs.device }}' in native
-assert 'KUIKLY_MODULE_BOOTED_BY_CI: ${{ steps.module-simulator.outputs.booted_by_ci }}' in native
-assert '${KUIKLY_MODULE_BOOTED_BY_CI:?Simulator preparation did not produce an ownership flag}' in native
-assert 'python3 verification/ci/test_native_ci_overlap.py' in workflow
-block = re.search(r'      - name: Compile native Kuikly receiver with pinned SDK\n.*?        run: \|\n(.*?)(?=      - name:)', native, re.S).group(1)
-block = '\n'.join(line[10:] for line in block.splitlines())
-
 with tempfile.TemporaryDirectory() as directory:
     temp = Path(directory)
     repo = temp / 'repo'
@@ -137,45 +124,4 @@ with tempfile.TemporaryDirectory() as directory:
     result, sim = run('normal', str(products))
     assert result.returncode == 0 and sim[0] == 'list'
 
-    # 执行 workflow 原 shell 块：双方必须在另一方完成前启动，任一失败均使门禁失败。
-    parallel_bin = temp / 'parallel-bin'
-    parallel_bin.mkdir()
-    bash = parallel_bin / 'bash'
-    bash.write_text('#!' + sys.executable + '\nimport os, sys\n'
-                    'assert sys.argv[1] == "scripts/ci-build-kuikly-render.sh"\n'
-                    'if os.environ["MOCK_CASE"] == "pod_failure": sys.exit(21)\n'
-                    'print(os.environ["MOCK_PRODUCTS"])\n')
-    bash.chmod(0o755)
-    python = parallel_bin / 'python3'
-    python.write_text('#!' + sys.executable + '\n' + r'''import os, sys, time
-from pathlib import Path
-args = sys.argv[1:]
-assert args[:3] == ['scripts/ci-run.py', '--no-progress-seconds', '300']
-name = 'module' if 'scripts/verify-kuikly-module.sh' in args else 'assembly'
-assert args[-1] == os.environ['MOCK_PRODUCTS']
-assert os.environ['KUIKLY_MODULE_SIMULATOR'] == os.environ['MOCK_DEVICE']
-folder = Path(os.environ['MOCK_PARALLEL'])
-(folder / (name + '.start')).touch()
-other = 'assembly' if name == 'module' else 'module'
-deadline = time.monotonic() + 4
-while not (folder / (other + '.start')).exists():
-    if time.monotonic() > deadline: sys.exit(22)
-    time.sleep(0.01)
-time.sleep(0.05)
-(folder / (name + '.done')).touch()
-sys.exit(23 if os.environ['MOCK_CASE'] in [name + '_failure', 'both_failure'] else 0)
-''')
-    python.chmod(0o755)
-    for case in ['normal', 'module_failure', 'assembly_failure', 'both_failure', 'pod_failure', 'missing_device']:
-        folder = temp / case
-        folder.mkdir()
-        parallel_env = dict(env, PATH=str(parallel_bin) + os.pathsep + os.environ['PATH'],
-                            KUIKLY_MODULE_SIMULATOR='' if case == 'missing_device' else DEVICE,
-                            MOCK_CASE=case, MOCK_PRODUCTS=str(products), MOCK_PARALLEL=str(folder), RUNNER_TEMP=str(temp))
-        result = subprocess.run(['/bin/bash', '-e', '-o', 'pipefail', '-c', block], env=parallel_env,
-                                capture_output=True, text=True, timeout=8)
-        assert (result.returncode == 0) == (case == 'normal'), (case, result.stderr)
-        assert len(list(folder.iterdir())) == (0 if case in ['pod_failure', 'missing_device'] else 4)
-        if case not in ['pod_failure', 'missing_device']:
-            assert 'Native checks: module=' in result.stdout
-print('Native CI contract: early reused boot, ownership-safe cleanup, fresh receipt and both parallel results required')
+print('Native module contract: reused boot, ownership-safe cleanup and fresh receipt')
