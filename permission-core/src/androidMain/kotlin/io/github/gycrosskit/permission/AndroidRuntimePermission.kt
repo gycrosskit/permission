@@ -24,6 +24,8 @@ enum class AndroidRuntimePermissionState {
     REQUESTED_WITHOUT_RATIONALE,
     /** 企业策略等系统限制；不能通过普通设置恢复。 */
     RESTRICTED,
+    /** 实际重试被拒绝且无 rationale，可提示设置恢复；不证明永久拒绝。 */
+    SETTINGS_REQUIRED,
 }
 
 /**
@@ -45,20 +47,22 @@ suspend fun ComponentActivity.requestRuntimePermission(
         AndroidRuntimePermissionState.NOT_REQUESTED,
         AndroidRuntimePermissionState.DENIED,
         AndroidRuntimePermissionState.REQUESTED_WITHOUT_RATIONALE,
+        AndroidRuntimePermissionState.SETTINGS_REQUIRED,
         -> {
-            val granted = suspendCancellableCoroutine { continuation ->
-                lateinit var launcher: ActivityResultLauncher<String>
+            val results = suspendCancellableCoroutine<Map<String, Boolean>> { continuation ->
+                lateinit var launcher: ActivityResultLauncher<Array<String>>
                 launcher = activityResultRegistry.register(
                     "runtime_permission_${System.nanoTime()}",
-                    ActivityResultContracts.RequestPermission(),
-                ) { granted ->
+                    // 单权限 Boolean 合同会把取消/空回执也压成 false，不能据此提示设置。
+                    ActivityResultContracts.RequestMultiplePermissions(),
+                ) { results ->
                     launcher.unregister()
-                    if (continuation.isActive) continuation.resume(granted)
+                    if (continuation.isActive) continuation.resume(results)
                 }
                 continuation.invokeOnCancellation { runOnUiThread { launcher.unregister() } }
                 if (continuation.isActive) {
                     runCatching {
-                        launcher.launch(permission)
+                        launcher.launch(arrayOf(permission))
                         history.markRequested(this@requestRuntimePermission, permission)
                     }.onFailure {
                         launcher.unregister()
@@ -69,8 +73,12 @@ suspend fun ComponentActivity.requestRuntimePermission(
                 }
             }
             when {
-                granted -> AndroidRuntimePermissionState.GRANTED
+                results[permission] == null -> AndroidRuntimePermissionState.DENIED
+                results[permission] == true || isRuntimePermissionGranted(permission) -> AndroidRuntimePermissionState.GRANTED
                 packageManager.isPermissionRevokedByPolicy(permission, packageName) -> AndroidRuntimePermissionState.RESTRICTED
+                status == AndroidRuntimePermissionState.REQUESTED_WITHOUT_RATIONALE &&
+                    results[permission] == false && !shouldShowRequestPermissionRationale(permission) ->
+                    AndroidRuntimePermissionState.SETTINGS_REQUIRED
                 else -> AndroidRuntimePermissionState.DENIED
             }
         }

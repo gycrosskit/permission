@@ -172,13 +172,13 @@ val cameraHistory = AndroidPermissionRequestHistory() // 每个 picker 一个实
 // 旧写相册权限的历史对象由宿主进程范围持有并注入，避免替换 saver 时丢失申请事实。
 val state = activity.requestRuntimePermission(android.Manifest.permission.CAMERA, cameraHistory)
 // 宿主映射 AndroidRuntimePermissionState 到 MediaPermissionState：
-// GRANTED 可用；RESTRICTED 保留为系统限制，不引导设置；其余不能仅凭历史推断永久拒绝。
+// GRANTED 可用；SETTINGS_REQUIRED 可提示设置恢复；RESTRICTED 不引导设置；其它按拒绝处理。
 ```
 
 默认历史仅在对象实例内；传 `preferencesName` 可沿用旧 namespace 持久化，同一历史对象可由多个调用方共享。
 `AndroidPermissionPlatform(requestHistory = history)` 也支持显式注入，原 `historyPreferencesName` 参数保持。
 已授权或受系统策略限制时直接返回；其余状态在用户主动操作时发起一次系统申请，包括一次授权失效后的再次申请。
-false 回调遇系统策略限制时返回 RESTRICTED，其余返回 DENIED，不能区分普通拒绝与系统阻止弹窗；保留的 REQUESTED_WITHOUT_RATIONALE 枚举值不能作为永久拒绝或必须前往设置的依据。
+申请前已是 REQUESTED_WITHOUT_RATIONALE，实际重试明确拒绝且回执后仍无 rationale 时返回 SETTINGS_REQUIRED，宿主可提供设置恢复入口；它不是永久拒绝证明，也不阻止后续再次申请。首次拒绝、有 rationale 或空回执返回 DENIED，系统策略限制返回 RESTRICTED。旧 REQUESTED_WITHOUT_RATIONALE 仍只是查询时的历史推断，不能作为设置提示依据。
 协程取消、结果交付和启动失败均注销本次 ActivityResult launcher。
 此执行器不提供相册权限管理、设置导航或媒体业务映射，旧系统 WRITE_EXTERNAL_STORAGE 仍由宿主按需声明。
 
