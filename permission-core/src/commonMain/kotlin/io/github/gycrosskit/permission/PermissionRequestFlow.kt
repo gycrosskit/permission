@@ -61,23 +61,32 @@ private suspend fun runPermissionRequestFlow(
     onSettingsRequired: (suspend () -> Boolean)?,
     onDenied: (suspend () -> Unit)?,
 ): PermissionRequestResult {
+    currentCoroutineContext().ensureActive()
     val handlers = PermissionFlowDefaults.snapshot()
     suspend fun denied(): PermissionRequestResult {
-        currentCoroutineContext().ensureActive()
         if (onDenied != null) onDenied() else handlers.onDenied(permissionKey)
+        currentCoroutineContext().ensureActive()
         return PermissionRequestResult.DENIED
     }
     val before = getStatus()
+    currentCoroutineContext().ensureActive()
     if (before.allowsUse) return PermissionRequestResult.GRANTED
     if (before != PermissionStatus.NOT_DETERMINED && before != PermissionStatus.DENIED) {
         return denied()
     }
-    if (!(onExplanation?.invoke() ?: handlers.onExplanation(permissionKey))) return PermissionRequestResult.CANCELLED
+    val explained = onExplanation?.invoke() ?: handlers.onExplanation(permissionKey)
+    currentCoroutineContext().ensureActive()
+    if (!explained) return PermissionRequestResult.CANCELLED
     val requested = request()
+    currentCoroutineContext().ensureActive()
     if (requested.allowsUse) return PermissionRequestResult.GRANTED
     if (before != PermissionStatus.DENIED || requested != PermissionStatus.DENIED) {
         return denied()
     }
-    if (!(onSettingsRequired?.invoke() ?: handlers.onSettingsRequired(permissionKey))) return PermissionRequestResult.CANCELLED
-    return if (resumeAfterSettings().allowsUse) PermissionRequestResult.GRANTED else denied()
+    val settingsReturned = onSettingsRequired?.invoke() ?: handlers.onSettingsRequired(permissionKey)
+    currentCoroutineContext().ensureActive()
+    if (!settingsReturned) return PermissionRequestResult.CANCELLED
+    val restored = resumeAfterSettings()
+    currentCoroutineContext().ensureActive()
+    return if (restored.allowsUse) PermissionRequestResult.GRANTED else denied()
 }

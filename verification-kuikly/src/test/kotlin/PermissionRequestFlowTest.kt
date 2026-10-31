@@ -5,12 +5,15 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.AfterTest
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class PermissionRequestFlowTest {
@@ -21,11 +24,13 @@ class PermissionRequestFlowTest {
         val requested: PermissionStatus = PermissionStatus.DENIED,
         val restored: PermissionStatus = PermissionStatus.DENIED,
         val pauseAt: String? = null,
+        val cancelAt: String? = null,
     ) : PermissionPlatform {
         val calls = mutableListOf<String>()
         suspend fun record(phase: String) {
             calls += phase
             if (pauseAt == phase) awaitCancellation()
+            if (cancelAt == phase) currentCoroutineContext().cancel()
         }
         override suspend fun getStatus(permission: AppPermission): PermissionStatus { record("status"); return before }
         override suspend fun request(permission: AppPermission): PermissionStatus { record("request"); return requested }
@@ -137,6 +142,31 @@ class PermissionRequestFlowTest {
             result.cancel()
             assertFailsWith<CancellationException> { result.await() }
             assertEquals(phases.take(index + 1), platform.calls)
+        }
+    }
+
+    @Test fun `synchronous return after cancelling current job cannot advance flow or caller`() = runTest {
+        val phases = listOf("status", "explanation", "request", "settings", "resume", "denied")
+        for (phase in listOf("entry") + phases) {
+            val platform = Platform(
+                before = if (phase == "status") PermissionStatus.GRANTED else PermissionStatus.DENIED,
+                requested = if (phase == "request") PermissionStatus.GRANTED else PermissionStatus.DENIED,
+                restored = if (phase == "resume") PermissionStatus.GRANTED else PermissionStatus.DENIED,
+                cancelAt = phase,
+            )
+            var callerContinued = false
+            val result = async {
+                if (phase == "entry") currentCoroutineContext().cancel()
+                platform.requestWithFlow(AppPermission.CAMERA,
+                    onExplanation = { platform.record("explanation"); true },
+                    onSettingsRequired = { platform.record("settings"); true },
+                    onDenied = { platform.record("denied") })
+                callerContinued = true
+            }
+            runCurrent()
+            assertFailsWith<CancellationException> { result.await() }
+            assertFalse(callerContinued, "Caller continued after cancellation at $phase")
+            assertEquals(phases.take(phases.indexOf(phase) + 1), platform.calls)
         }
     }
 
