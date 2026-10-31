@@ -35,4 +35,19 @@ interface PermissionPlatform {
      * @param permission 返回设置页后需要重新确认的权限。
      */
     suspend fun resumeAfterSettings(permission: AppPermission): PermissionStatus = getStatus(permission)
+
+    /** 能力 key 由宿主注册；内置 key 与 AppPermission.name 相同，未知能力返回 UNSUPPORTED。 */
+    suspend fun getStatus(permission: String): PermissionStatus =
+        AppPermission.entries.firstOrNull { it.name == permission }?.let { getStatus(it) }
+            ?: PermissionStatus.UNSUPPORTED
+
+    /** String 是能力 key，不是跨平台系统权限字符串；原生声明和申请策略由对应 handler 负责。 */
+    suspend fun request(permission: String): PermissionStatus =
+        AppPermission.entries.firstOrNull { it.name == permission }?.let { request(it) }
+            ?: PermissionStatus.UNSUPPORTED
+
+    /** 扩展能力可独立实现设置返回策略。 */
+    suspend fun resumeAfterSettings(permission: String): PermissionStatus =
+        AppPermission.entries.firstOrNull { it.name == permission }?.let { resumeAfterSettings(it) }
+            ?: PermissionStatus.UNSUPPORTED
 }

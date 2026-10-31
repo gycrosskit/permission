@@ -20,6 +20,9 @@ enum class PermissionStatus {
 
     /** 权限被系统策略或家长控制限制，应用自身无法恢复。 */
     RESTRICTED,
+
+    /** 当前平台没有注册此能力；不能通过设置页恢复。 */
+    UNSUPPORTED,
     ;
 
     /** 完整或受限授权都可继续，具体能力差异由宿主决定。 */

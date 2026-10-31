@@ -25,22 +25,27 @@ class PermissionModule : Module(), PermissionPlatform {
 
     override fun moduleName(): String = NAME
 
-    override suspend fun getStatus(permission: AppPermission): PermissionStatus = status("getStatus", permission)
+    override suspend fun getStatus(permission: AppPermission): PermissionStatus = getStatus(permission.name)
+    override suspend fun request(permission: AppPermission): PermissionStatus = request(permission.name)
+    override suspend fun resumeAfterSettings(permission: AppPermission): PermissionStatus = resumeAfterSettings(permission.name)
 
-    override suspend fun request(permission: AppPermission): PermissionStatus = requestMutex.withLock {
+    override suspend fun getStatus(permission: String): PermissionStatus = status("getStatus", permission)
+
+    override suspend fun request(permission: String): PermissionStatus = requestMutex.withLock {
         status("request", permission)
     }
 
-    override suspend fun resumeAfterSettings(permission: AppPermission): PermissionStatus {
-        // Android 的“每次询问”和 iOS 重读策略归现有原生 owner；OHOS 保留原协议。
-        if (pageData?.isAndroid == true || pageData?.isIOS == true) return status("resumeAfterSettings", permission)
+    override suspend fun resumeAfterSettings(permission: String): PermissionStatus {
+        // 内置 OHOS 保留原恢复策略；扩展交给注册 handler，不把平台原生权限名带入公共协议。
+        if (pageData?.isAndroid == true || pageData?.isIOS == true ||
+            AppPermission.entries.none { it.name == permission }) return status("resumeAfterSettings", permission)
         val current = getStatus(permission)
         return if (current == PermissionStatus.NOT_DETERMINED) request(permission) else current
     }
 
-    private suspend fun status(method: String, permission: AppPermission): PermissionStatus {
+    private suspend fun status(method: String, permission: String): PermissionStatus {
         val response = withTimeout(120_000L) {
-            invoke(method, JSONObject().apply { put("permission", permission.name) })
+            invoke(method, JSONObject().apply { put("permission", permission) })
         }
         return PermissionStatus.entries.firstOrNull { it.name == response?.optString("status") }
             ?: error("Native permission service unavailable")

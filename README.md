@@ -9,7 +9,7 @@
 
 ## 当前功能与平台边界
 
-core 提供相机、麦克风、前台定位的五种权限状态及申请/恢复；不提供页面 UI，permission-kuikly包含三端 Module 与 Android/iOS receiver，复用宿主已有原生 owner。
+core 内置相机、麦克风、前台定位，提供六种权限状态（含未注册能力的 `UNSUPPORTED`）及申请/恢复；不提供页面 UI，permission-kuikly包含三端 Module 与 Android/iOS receiver，复用宿主已有原生 owner。
 
 历史发布基线：Maven 0.1.8；HAR 0.1.6沿用原字节。远程验收以固定 Release 结果为准。本次修复与平台边界见[功能与平台差异](docs/功能与平台差异.md)，构建与渠道验收见[版本发布记录](https://github.com/gycrosskit/permission/releases/tag/0.1.8)；下方旧版本记录保留其历史范围。
 
@@ -19,7 +19,7 @@ core 提供相机、麦克风、前台定位的五种权限状态及申请/恢�
 
 [历史完整源码审查](docs/完整源码审查.md) 列出全部生产文件、公开调用链、实际验证与未测项。
 
-相机、麦克风和前台定位的权限状态查询与申请。宿主负责申请时机、说明文案、系统权限声明和应用设置页跳转。
+相机、麦克风和前台定位的权限状态查询与申请。宿主可通过 `PermissionRegistry` / `PermissionHandler` 注册其它能力 key，旧 `AppPermission` 调用保持兼容；Kuikly 三端透传同一 key，未注册返回 `UNSUPPORTED`。key 表示能力，不是跨平台 Manifest 权限串，注册与各端原生实现见[接入指南](docs/接入指南.md#宿主扩展能力)。宿主负责申请时机、说明文案、系统权限声明和应用设置页跳转。
 
 此版本将 Android `isPermissionRevokedByPolicy` 映射为 `RESTRICTED`；已有完整/粗略授权优先，设备策略限制不引导为普通设置恢复。
 
@@ -172,20 +172,21 @@ val cameraHistory = AndroidPermissionRequestHistory() // 每个 picker 一个实
 // 旧写相册权限的历史对象由宿主进程范围持有并注入，避免替换 saver 时丢失申请事实。
 val state = activity.requestRuntimePermission(android.Manifest.permission.CAMERA, cameraHistory)
 // 宿主映射 AndroidRuntimePermissionState 到 MediaPermissionState：
-// GRANTED -> GRANTED；REQUESTED_WITHOUT_RATIONALE -> BLOCKED；其余 -> DENIED。
+// GRANTED 可用；RESTRICTED 保留为系统限制，不引导设置；其余不能仅凭历史推断永久拒绝。
 ```
 
 默认历史仅在对象实例内；传 `preferencesName` 可沿用旧 namespace 持久化，同一历史对象可由多个调用方共享。
 `AndroidPermissionPlatform(requestHistory = history)` 也支持显式注入，原 `historyPreferencesName` 参数保持。
-首次/仍有 rationale 时申请；刚拒绝返回 DENIED，下次主动申请才根据历史与 rationale 返回
-REQUESTED_WITHOUT_RATIONALE。协程取消、结果交付和启动失败均注销本次 ActivityResult launcher。
+已授权或受系统策略限制时直接返回；其余状态在用户主动操作时发起一次系统申请，包括一次授权失效后的再次申请。
+false 回调遇系统策略限制时返回 RESTRICTED，其余返回 DENIED，不能区分普通拒绝与系统阻止弹窗；保留的 REQUESTED_WITHOUT_RATIONALE 枚举值不能作为永久拒绝或必须前往设置的依据。
+协程取消、结果交付和启动失败均注销本次 ActivityResult launcher。
 此执行器不提供相册权限管理、设置导航或媒体业务映射，旧系统 WRITE_EXTERNAL_STORAGE 仍由宿主按需声明。
 
 ## 权限与生命周期
 
 Android 权限 Launcher 注册/启动失败会完整释放本次等待并传播异常，只在系统受理后记录申请历史；HAR 入口导出 `GycPermission` / `GycPermissionStatus` 类型。
 
-状态为 `NOT_DETERMINED / GRANTED / LIMITED / DENIED / RESTRICTED`；`LIMITED` 表示可用但受限，例如粗略定位。Android `DENIED` 不等于永久拒绝，设置返回后调用 `resumeAfterSettings` 重新判断。Android 宿主解绑会让属于该页面的挂起申请失败；取消协程不能强制关闭系统授权弹窗，迟到结果不会交给新请求。
+状态为 `NOT_DETERMINED / GRANTED / LIMITED / DENIED / RESTRICTED / UNSUPPORTED`；`LIMITED` 表示可用但受限，例如粗略定位。Android `DENIED` 不等于永久拒绝，设置返回后调用 `resumeAfterSettings` 重新判断。Android 宿主解绑会让属于该页面的挂起申请失败；取消协程不能强制关闭系统授权弹窗，迟到结果不会交给新请求。
 
 Android Manifest 按需声明 `CAMERA`、`RECORD_AUDIO`、`ACCESS_COARSE_LOCATION`、`ACCESS_FINE_LOCATION`；iOS Info.plist 按需填写 `NSCameraUsageDescription`、`NSMicrophoneUsageDescription`、`NSLocationWhenInUseUsageDescription`，缺少声明可能导致系统终止应用。HarmonyOS 声明实际使用的相机、麦克风或前台定位权限。Kuikly Module 每页一个实例，页面结束时调用 `dispose()`。
 

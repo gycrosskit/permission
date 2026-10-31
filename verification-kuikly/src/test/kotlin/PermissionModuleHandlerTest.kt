@@ -57,7 +57,7 @@ class PermissionModuleHandlerTest {
         handler.call("resumeAfterSettings", args("resume"), replies::add)
         handler.call("request", "{\"requestId\":\"bad\",\"permission\":\"OTHER\"}", replies::add)
         runCurrent()
-        assertEquals(setOf("LIMITED", "DENIED", "error"), replies.map { JSONObject(it).optString("status") }.toSet())
+        assertEquals(setOf("LIMITED", "DENIED", "UNSUPPORTED"), replies.map { JSONObject(it).optString("status") }.toSet())
         assertEquals(1, platform.resumed)
         assertTrue(platform.waits.isEmpty())
         handler.dispose()
@@ -77,6 +77,63 @@ class PermissionModuleHandlerTest {
         runCurrent()
         assertEquals(listOf("DENIED"), replies.map { JSONObject(it).optString("status") })
         handler.dispose()
+    }
+
+
+    @Test fun `custom capability traverses caller receiver and registry for every operation`() = runTest {
+        val calls = mutableListOf<String>()
+        val registry = PermissionRegistry(Platform(), mapOf("PHOTO_LIBRARY" to object : PermissionHandler {
+            override suspend fun getStatus(): PermissionStatus { calls += "getStatus"; return PermissionStatus.NOT_DETERMINED }
+            override suspend fun request(): PermissionStatus { calls += "request"; return PermissionStatus.LIMITED }
+            override suspend fun resumeAfterSettings(): PermissionStatus { calls += "resumeAfterSettings"; return PermissionStatus.RESTRICTED }
+        }))
+        val handler = PermissionModuleHandler(registry)
+        for (android in listOf(false, true)) {
+            val module = PermissionModule().apply { pageData = PageData(isAndroid = android) }
+            for ((method, expected) in listOf("getStatus" to PermissionStatus.NOT_DETERMINED,
+                "request" to PermissionStatus.LIMITED, "resumeAfterSettings" to PermissionStatus.RESTRICTED)) {
+                val result = async { when (method) {
+                    "getStatus" -> module.getStatus("PHOTO_LIBRARY")
+                    "request" -> module.request("PHOTO_LIBRARY")
+                    else -> module.resumeAfterSettings("PHOTO_LIBRARY")
+                } }
+                runCurrent()
+                val (nativeMethod, params) = module.calls.last()
+                assertEquals(method, nativeMethod)
+                assertEquals("PHOTO_LIBRARY", JSONObject(params).optString("permission"))
+                handler.call(nativeMethod, params) { module.response(JSONObject(it)) }
+                runCurrent()
+                assertEquals(expected, result.await())
+            }
+            module.dispose()
+        }
+        assertEquals(List(2) { listOf("getStatus", "request", "resumeAfterSettings") }.flatten(), calls)
+        assertEquals(PermissionStatus.LIMITED, registry.getStatus(AppPermission.CAMERA))
+        assertEquals(PermissionStatus.LIMITED, registry.getStatus("CAMERA"))
+        for (unknown in listOf("UNKNOWN", "android.permission.READ_MEDIA_IMAGES")) {
+            assertEquals(PermissionStatus.UNSUPPORTED, registry.getStatus(unknown))
+            assertEquals(PermissionStatus.UNSUPPORTED, registry.request(unknown))
+            assertEquals(PermissionStatus.UNSUPPORTED, registry.resumeAfterSettings(unknown))
+        }
+        handler.dispose()
+    }
+
+    @Test fun `registry copies handlers and rejects replacing builtins or blank capability`() = runTest {
+        val handler = object : PermissionHandler {
+            override suspend fun getStatus() = PermissionStatus.GRANTED
+            override suspend fun request() = PermissionStatus.GRANTED
+        }
+        val registrations = mutableMapOf("PHOTO_LIBRARY" to handler)
+        val registry = PermissionRegistry(Platform(), registrations)
+        registrations.clear()
+        assertEquals(PermissionStatus.GRANTED, registry.getStatus("PHOTO_LIBRARY"))
+        assertFailsWith<IllegalArgumentException> { PermissionRegistry(Platform(), mapOf("CAMERA" to handler)) }
+        assertFailsWith<IllegalArgumentException> { PermissionRegistry(Platform(), mapOf(" " to handler)) }
+        assertFailsWith<IllegalArgumentException> { PermissionRegistry(registry, mapOf("PHOTO_LIBRARY" to handler)) }
+        val nested = PermissionRegistry(registry, mapOf("NOTIFICATIONS" to handler))
+        assertFailsWith<IllegalArgumentException> { PermissionRegistry(nested, mapOf("PHOTO_LIBRARY" to handler)) }
+        assertEquals(PermissionStatus.GRANTED, nested.request("PHOTO_LIBRARY"))
+        assertFalse(PermissionStatus.UNSUPPORTED.allowsUse)
     }
 
     @Test fun `Android and iOS caller use native settings recovery rather than OHOS policy`() = runTest {

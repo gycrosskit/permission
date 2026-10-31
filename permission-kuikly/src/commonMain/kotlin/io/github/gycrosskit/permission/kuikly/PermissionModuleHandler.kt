@@ -1,7 +1,6 @@
 package io.github.gycrosskit.permission.kuikly
 
 import com.tencent.kuikly.core.nvi.serialization.json.JSONObject
-import io.github.gycrosskit.permission.AppPermission
 import io.github.gycrosskit.permission.PermissionPlatform
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -29,7 +28,7 @@ class PermissionModuleHandler(private val platform: PermissionPlatform) {
                 id?.let { requests.remove(it)?.cancel() }
                 return@launch
             }
-            val permission = AppPermission.entries.firstOrNull { it.name == args.opt("permission") }
+            val permission = (args.opt("permission") as? String)?.takeIf { it.isNotBlank() }
             if (id == null || permission == null || requests.containsKey(id) ||
                 method !in listOf("getStatus", "request", "resumeAfterSettings")) {
                 callback("{\"status\":\"error\"}")

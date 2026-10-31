@@ -26,7 +26,7 @@ import kotlin.test.assertTrue
 @Config(sdk = [28])
 class AndroidRuntimePermissionTest {
     @Test
-    fun `new denial stays denied and next request observes blocked history`() = runTest {
+    fun `new denial stays denied without claiming permanent denial`() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         val controller = Robolectric.buildActivity(ComponentActivity::class.java).setup()
         val activity = controller.get()
@@ -37,10 +37,7 @@ class AndroidRuntimePermissionTest {
             val code = shadowOf(activity).lastRequestedPermission.requestCode
             assertTrue(activity.activityResultRegistry.dispatchResult(code, false))
             assertEquals(AndroidRuntimePermissionState.DENIED, result.await())
-            assertEquals(
-                AndroidRuntimePermissionState.REQUESTED_WITHOUT_RATIONALE,
-                activity.requestRuntimePermission(Manifest.permission.CAMERA, history),
-            )
+            assertTrue(history.wasRequested(activity, Manifest.permission.CAMERA))
         } finally {
             controller.destroy()
             Dispatchers.resetMain()
@@ -90,30 +87,45 @@ class AndroidRuntimePermissionTest {
     }
 
     @Test
-    fun `old explicit namespace and granted state bypass system request`() = runTest {
+    fun `revoked grant can be requested again with persistent history and no rationale`() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         val controller = Robolectric.buildActivity(ComponentActivity::class.java).setup()
         val activity = controller.get()
+        val namespace = "runtime_permission_test"
         try {
-            val namespace = "runtime_permission_test"
             activity.getSharedPreferences(namespace, Context.MODE_PRIVATE).edit()
                 .putBoolean(Manifest.permission.CAMERA, true).commit()
             val history = AndroidPermissionRequestHistory(namespace)
-            assertEquals(
-                AndroidRuntimePermissionState.REQUESTED_WITHOUT_RATIONALE,
-                activity.requestRuntimePermission(Manifest.permission.CAMERA, history),
-            )
             shadowOf(activity).grantPermissions(Manifest.permission.CAMERA)
             assertEquals(
                 AndroidRuntimePermissionState.GRANTED,
                 activity.requestRuntimePermission(Manifest.permission.CAMERA, history),
             )
-            assertTrue(AndroidPermissionRequestHistory(namespace).wasRequested(activity, Manifest.permission.CAMERA))
-            activity.getSharedPreferences(namespace, Context.MODE_PRIVATE).edit().clear().commit()
+            shadowOf(activity).denyPermissions(Manifest.permission.CAMERA)
+            val restoredHistory = AndroidPermissionRequestHistory(namespace)
+            assertTrue(restoredHistory.wasRequested(activity, Manifest.permission.CAMERA))
+            assertFalse(activity.shouldShowRequestPermissionRationale(Manifest.permission.CAMERA))
+            val result = async { activity.requestRuntimePermission(Manifest.permission.CAMERA, restoredHistory) }
+            runCurrent()
+            assertFalse(result.isCompleted, "old history must not bypass a new system request")
+            val code = shadowOf(activity).lastRequestedPermission.requestCode
+            assertTrue(activity.activityResultRegistry.dispatchResult(code, true))
+            assertEquals(AndroidRuntimePermissionState.GRANTED, result.await())
         } finally {
+            activity.getSharedPreferences(namespace, Context.MODE_PRIVATE).edit().clear().commit()
             controller.destroy()
             Dispatchers.resetMain()
         }
+    }
+
+    @Test
+    fun `policy restriction is distinct from denial and real grant takes priority`() {
+        assertEquals(AndroidRuntimePermissionState.RESTRICTED,
+            resolveAndroidRuntimePermissionState(false, false, false, revokedByPolicy = true))
+        assertEquals(AndroidRuntimePermissionState.RESTRICTED,
+            resolveAndroidRuntimePermissionState(false, true, true, revokedByPolicy = true))
+        assertEquals(AndroidRuntimePermissionState.GRANTED,
+            resolveAndroidRuntimePermissionState(true, true, true, revokedByPolicy = true))
     }
 
     @Test
