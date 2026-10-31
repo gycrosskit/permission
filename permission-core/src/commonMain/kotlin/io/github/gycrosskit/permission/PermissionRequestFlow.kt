@@ -20,7 +20,8 @@ object PermissionFlowDefaults {
 
     fun configure(handlers: PermissionFlowHandlers) { this.handlers.value = handlers }
 
-    internal fun snapshot(): PermissionFlowHandlers = handlers.value
+    /** 捕获当前交互配置，供网页等已有原生权限流程复用；不触发系统申请。 */
+    fun snapshot(): PermissionFlowHandlers = handlers.value
 }
 
 /**
