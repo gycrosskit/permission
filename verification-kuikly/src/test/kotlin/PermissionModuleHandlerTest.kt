@@ -118,6 +118,52 @@ class PermissionModuleHandlerTest {
         handler.dispose()
     }
 
+    @Test fun `cancelled or timed out custom query cancels native coroutine and releases its listener`() = runTest {
+        for (timeout in listOf(false, true)) {
+            var started = 0
+            var released = 0
+            var replies = 0
+            val registry = PermissionRegistry(Platform(), mapOf("ASYNC_STATUS" to object : PermissionHandler {
+                override suspend fun getStatus(): PermissionStatus {
+                    started++
+                    try { awaitCancellation() } finally { released++ }
+                }
+                override suspend fun request() = PermissionStatus.GRANTED
+            }))
+            val handler = PermissionModuleHandler(registry)
+            val module = PermissionModule()
+            try {
+                val query = async { module.getStatus("ASYNC_STATUS") }
+                runCurrent()
+                val (method, params) = module.calls.single()
+                handler.call(method, params) { replies++; module.response(JSONObject(it)) }
+                runCurrent()
+                assertEquals(1, started)
+                assertEquals(0, released)
+                if (timeout) {
+                    advanceTimeBy(120_000L)
+                    runCurrent()
+                    assertFailsWith<TimeoutCancellationException> { query.await() }
+                } else {
+                    query.cancel()
+                    runCurrent()
+                    assertTrue(query.isCancelled)
+                }
+                assertEquals(1, module.cancelled.size, "query cancellation must reach its native request ID")
+                assertEquals(JSONObject(params).optString("requestId"), module.cancelled.single().optString("requestId"))
+                handler.call("cancelQueued", module.cancelled.single().toString()) { error("Cancellation must not reply") }
+                runCurrent()
+                assertEquals(1, released, "native handler finally must release the suspended query listener")
+                assertEquals(0, replies)
+                assertEquals(1, module.removedCallbacks)
+            } finally {
+                module.dispose()
+                handler.dispose()
+                runCurrent()
+            }
+        }
+    }
+
     @Test fun `registry copies handlers and rejects replacing builtins or blank capability`() = runTest {
         val handler = object : PermissionHandler {
             override suspend fun getStatus() = PermissionStatus.GRANTED

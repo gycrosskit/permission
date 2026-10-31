@@ -72,8 +72,8 @@ class PermissionModule : Module(), PermissionPlatform {
             return response
         } finally {
             continuation?.let { pending.remove(it) }
-            // 只能撤销还在原生队列中的申请；已经展示的系统弹窗继续持有全局屏障。
-            if ((method == "request" || method == "resumeAfterSettings") && !completed) {
+            // 扩展查询也可挂起；取消原生等待，已显示的系统弹窗屏障仍由 platform owner 保留。
+            if (!completed) {
                 asyncToNativeMethod("cancelQueued", JSONObject().apply { put("requestId", requestId) }, null)
             }
             reference?.let(::removeCallback)
