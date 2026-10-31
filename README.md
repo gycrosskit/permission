@@ -1,8 +1,8 @@
 # GY CrossKit Permission
 
-> 当前源码候选统一为 **1.0.0**：Maven（core/Kuikly）、iOS Pod 与 OHPM 使用同版；尚未发布，示例坐标须待发布后远程消费。本地验证使用显式源码/本地 HAR，Kuikly 基线为 2.29.1，真机与新版本远程消费另验。
+> 本轮是基于既有 **1.0.0** 的未发布改动，新版本号待验证后冻结；下方 `1.0.0` 坐标不包含本轮修复和新增能力。源码消费、各渠道产物与真机行为分别验证。
 
-当前源码为未发布的 Kuikly 2.29.1 配套候选；带发布标签的说明保留历史范围。新增 API 必须消费配套源码，不能用旧远程版本验证代替。
+当前源码配套 Kuikly 2.29.1；历史 Tag 与验收记录保持原范围。新增 API 必须消费本轮配套源码，不能用旧远程版本代替验证。
 
 已发布基线 Maven `0.1.9` 提供 `permission-kuikly` Android、iosArm64、iosX64、iosSimulatorArm64 targets、原生 receiver 和每 Renderer handler。iOS 可选 Pod `GycPermissionKuikly/Kuikly` `0.1.9` 使用真实 `OpenKuiklyIOSRender 2.28.0`；Kotlin handler 由宿主已有 Shared framework 导出。发布与远程消费状态以[对应 Release](https://github.com/gycrosskit/permission/releases/tag/0.1.9)为准。历史基线 Maven `0.1.8` 的 `-kuikly` 仅含 OHOS 变体；原 HAR 沿用。宿主需注册并维护已有原生能力 owner，示例见[接入指南](docs/接入指南.md#androidios-kuikly-native-module)。
 
@@ -143,7 +143,7 @@ ohosArm64Main.dependencies {
 }
 ```
 
-HarmonyOS 原生包独立安装，不由 Maven 依赖自动携带；当前 HAR 目标为 `1.0.0`（未发布）。新版本 Registry 消费另验；历史固定 [0.1.6 Release HAR](https://github.com/gycrosskit/permission/releases/tag/0.1.6) 消费分别验收，实际状态见顶部版本发布记录：
+HarmonyOS 原生包独立安装，不由 Maven 依赖自动携带；下方 HAR `1.0.0` 坐标属于既有版本，不包含本轮改动。新版本 Registry 消费另验；历史固定 [0.1.6 Release HAR](https://github.com/gycrosskit/permission/releases/tag/0.1.6) 消费分别验收，实际状态见顶部版本发布记录：
 
 ```sh
 ohpm install @gycrosskit/permission-native@1.0.0
