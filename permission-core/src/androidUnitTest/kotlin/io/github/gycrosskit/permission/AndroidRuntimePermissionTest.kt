@@ -1,7 +1,10 @@
 package io.github.gycrosskit.permission
 
 import android.Manifest
+import android.app.Activity
 import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
 import androidx.activity.ComponentActivity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -34,16 +37,14 @@ class AndroidRuntimePermissionTest {
             val history = AndroidPermissionRequestHistory()
             val result = async { activity.requestRuntimePermission(Manifest.permission.CAMERA, history) }
             runCurrent()
-            val code = shadowOf(activity).lastRequestedPermission.requestCode
-            assertTrue(activity.activityResultRegistry.dispatchResult(code, mapOf(Manifest.permission.CAMERA to false)))
+            activity.deliverCameraResult(false)
             assertEquals(AndroidRuntimePermissionState.DENIED, result.await())
             assertTrue(history.wasRequested(activity, Manifest.permission.CAMERA))
             assertFalse(activity.shouldShowRequestPermissionRationale(Manifest.permission.CAMERA))
             val retry = async { activity.requestRuntimePermission(Manifest.permission.CAMERA, history) }
             runCurrent()
             assertFalse(retry.isCompleted, "settings hint requires another real platform request")
-            val retryCode = shadowOf(activity).lastRequestedPermission.requestCode
-            assertTrue(activity.activityResultRegistry.dispatchResult(retryCode, mapOf(Manifest.permission.CAMERA to false)))
+            activity.deliverCameraResult(false)
             assertEquals(AndroidRuntimePermissionState.SETTINGS_REQUIRED, retry.await())
         } finally {
             controller.destroy()
@@ -115,8 +116,7 @@ class AndroidRuntimePermissionTest {
             val result = async { activity.requestRuntimePermission(Manifest.permission.CAMERA, restoredHistory) }
             runCurrent()
             assertFalse(result.isCompleted, "old history must not bypass a new system request")
-            val code = shadowOf(activity).lastRequestedPermission.requestCode
-            assertTrue(activity.activityResultRegistry.dispatchResult(code, mapOf(Manifest.permission.CAMERA to true)))
+            activity.deliverCameraResult(true)
             assertEquals(AndroidRuntimePermissionState.GRANTED, result.await())
         } finally {
             activity.getSharedPreferences(namespace, Context.MODE_PRIVATE).edit().clear().commit()
@@ -135,16 +135,14 @@ class AndroidRuntimePermissionTest {
             history.markRequested(activity, Manifest.permission.CAMERA)
             val cancelled = async { activity.requestRuntimePermission(Manifest.permission.CAMERA, history) }
             runCurrent()
-            val cancelledCode = shadowOf(activity).lastRequestedPermission.requestCode
             shadowOf(activity).grantPermissions(Manifest.permission.CAMERA)
-            assertTrue(activity.activityResultRegistry.dispatchResult(cancelledCode, emptyMap<String, Boolean>()))
+            activity.deliverCameraResult(null)
             assertEquals(AndroidRuntimePermissionState.DENIED, cancelled.await())
             shadowOf(activity).denyPermissions(Manifest.permission.CAMERA)
             val granted = async { activity.requestRuntimePermission(Manifest.permission.CAMERA, history) }
             runCurrent()
             assertFalse(granted.isCompleted)
-            val grantCode = shadowOf(activity).lastRequestedPermission.requestCode
-            assertTrue(activity.activityResultRegistry.dispatchResult(grantCode, mapOf(Manifest.permission.CAMERA to true)))
+            activity.deliverCameraResult(true)
             assertEquals(AndroidRuntimePermissionState.GRANTED, granted.await())
         } finally {
             controller.destroy()
@@ -165,8 +163,8 @@ class AndroidRuntimePermissionTest {
                 val result = async { activity.requestRuntimePermission(Manifest.permission.CAMERA, history) }
                 runCurrent()
                 shadowOf(activity.packageManager).setShouldShowRequestPermissionRationale(Manifest.permission.CAMERA, !before)
-                val code = shadowOf(activity).lastRequestedPermission.requestCode
-                assertTrue(activity.activityResultRegistry.dispatchResult(code, mapOf(Manifest.permission.CAMERA to false)))
+                assertFalse(result.isCompleted, "each rationale case requires its own platform request")
+                activity.deliverCameraResult(false)
                 assertEquals(AndroidRuntimePermissionState.DENIED, result.await())
             }
         } finally {
@@ -190,5 +188,22 @@ class AndroidRuntimePermissionTest {
         assertEquals(AndroidRuntimePermissionState.DENIED, resolveAndroidRuntimePermissionState(false, false, true))
         assertEquals(AndroidRuntimePermissionState.NOT_REQUESTED, resolveAndroidRuntimePermissionState(false, false, false))
         assertEquals(AndroidRuntimePermissionState.REQUESTED_WITHOUT_RATIONALE, resolveAndroidRuntimePermissionState(false, true, false))
+    }
+
+    private fun ComponentActivity.deliverCameraResult(granted: Boolean?) {
+        // 走 framework 回执以清除仍在申请的标记；直接 dispatchResult 会让下次申请被当成并行申请。
+        val permissions = if (granted == null) emptyArray() else arrayOf(Manifest.permission.CAMERA)
+        val results = when (granted) {
+            true -> intArrayOf(PackageManager.PERMISSION_GRANTED)
+            false -> intArrayOf(PackageManager.PERMISSION_DENIED)
+            null -> intArrayOf()
+        }
+        shadowOf(this).receiveResult(
+            shadowOf(this).nextStartedActivityForResult.intent,
+            Activity.RESULT_OK,
+            Intent()
+                .putExtra("android.content.pm.extra.REQUEST_PERMISSIONS_NAMES", permissions)
+                .putExtra("android.content.pm.extra.REQUEST_PERMISSIONS_RESULTS", results),
+        )
     }
 }
