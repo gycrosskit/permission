@@ -1,6 +1,6 @@
 # @gycrosskit/permission-native
 
-> 当前源码候选统一为 **1.0.0**：Maven（core/Kuikly）、iOS Pod 与 OHPM 使用同版；尚未发布，示例坐标须待发布后远程消费。本地验证使用显式源码/本地 HAR，Kuikly 基线为 2.29.1，真机与新版本远程消费另验。
+> 本轮为未发布改动；新增能力与修复须消费对应候选源码，各渠道版本及验收范围以根 README 和实际回执为准。既有版本坐标不包含本轮改动，源码编译不代表发布消费或真机通过。
 
 适用版本：此版 Maven `0.1.7` 复用已发布 HAR `0.1.6` 的原字节。完整功能与五入口限制见[功能与平台差异](https://github.com/gycrosskit/permission/blob/0.1.7/docs/功能与平台差异.md)；本版发布记录见[Release](https://github.com/gycrosskit/permission/releases/tag/0.1.7)。此源码 README 的文档更新不重新发布或修改既有 HAR。
 
