@@ -16,12 +16,16 @@ data class PermissionFlowHandlers(
 
 /** 应用初始化时配置；只保存交互，不缓存授权状态。在途流程保留入口时的配置快照。 */
 object PermissionFlowDefaults {
-    private val handlers = MutableStateFlow(PermissionFlowHandlers())
+    private val defaultHandlers = PermissionFlowHandlers()
+    private val handlers = MutableStateFlow<PermissionFlowHandlers?>(null)
 
     fun configure(handlers: PermissionFlowHandlers) { this.handlers.value = handlers }
 
+    /** 仅在从未配置时安装宿主默认交互；显式配置（包括空 hook）始终优先。 */
+    fun installDefaults(handlers: PermissionFlowHandlers): Boolean = this.handlers.compareAndSet(null, handlers)
+
     /** 捕获当前交互配置，供网页等已有原生权限流程复用；不触发系统申请。 */
-    fun snapshot(): PermissionFlowHandlers = handlers.value
+    fun snapshot(): PermissionFlowHandlers = handlers.value ?: defaultHandlers
 }
 
 /**

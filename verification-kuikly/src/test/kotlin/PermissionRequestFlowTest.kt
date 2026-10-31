@@ -19,6 +19,23 @@ import kotlin.test.assertFalse
 class PermissionRequestFlowTest {
     @AfterTest fun resetDefaults() { PermissionFlowDefaults.configure(PermissionFlowHandlers()) }
 
+    @Test fun installDefaultsNeverOverridesExplicitConfigurationIncludingEmptyHooks() = runTest {
+        val calls = mutableListOf<String>()
+        val custom = PermissionFlowHandlers(onExplanation = { calls += "explain:$it"; true },
+            onSettingsRequired = { calls += "settings:$it"; false })
+        PermissionFlowDefaults.configure(custom)
+        assertFalse(PermissionFlowDefaults.installDefaults(PermissionFlowHandlers()))
+        assertEquals(custom, PermissionFlowDefaults.snapshot())
+        assertEquals(true, PermissionFlowDefaults.snapshot().onExplanation("CAMERA"))
+        assertFalse(PermissionFlowDefaults.snapshot().onSettingsRequired("MICROPHONE"))
+        assertEquals(listOf("explain:CAMERA", "settings:MICROPHONE"), calls)
+        val empty = PermissionFlowHandlers()
+        PermissionFlowDefaults.configure(empty)
+        assertFalse(PermissionFlowDefaults.installDefaults(custom))
+        assertEquals(empty, PermissionFlowDefaults.snapshot())
+        assertFalse(PermissionFlowDefaults.snapshot().onExplanation("CAMERA"))
+    }
+
     private class Platform(
         val before: PermissionStatus,
         val requested: PermissionStatus = PermissionStatus.DENIED,
