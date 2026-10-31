@@ -1,5 +1,5 @@
 import { KRAny, KuiklyRenderBaseModule, KuiklyRenderCallback } from '@kuikly-open/render';
-import { GycPermission, GycPermissionService, GycPermissionStatus } from './GycPermissionService';
+import { GycPermissionService, GycPermissionStatus } from './GycPermissionService';
 
 interface PermissionParams { permission?: string; requestId?: string; }
 interface PermissionResult { status: string; }
@@ -9,7 +9,13 @@ class PermissionRequest { active: boolean = true; }
 export class GycPermissionModule extends KuiklyRenderBaseModule {
   /** 原生注册名，与 Kotlin PermissionModule.NAME 一致。 */
   static readonly MODULE_NAME: string = 'GycPermissionModule';
-  private readonly service = new GycPermissionService();
+  private readonly service: GycPermissionService;
+
+  /** 宿主可在无参 receiver 子类中注入同一套能力注册；每个 Renderer 仍创建新 receiver。 */
+  constructor(service: GycPermissionService = new GycPermissionService()) {
+    super();
+    this.service = service;
+  }
   private destroyed: boolean = false;
   private readonly requests: Map<string, PermissionRequest> = new Map();
 
@@ -34,10 +40,9 @@ export class GycPermissionModule extends KuiklyRenderBaseModule {
       }
       return { status: 'cancelled' };
     }
-    if (method !== 'getStatus' && method !== 'request') return { status: 'error' };
-    if (!args || (args.permission !== 'CAMERA' && args.permission !== 'MICROPHONE' &&
-      args.permission !== 'LOCATION_WHEN_IN_USE')) return { status: 'error' };
-    const permission: GycPermission = args.permission;
+    if (method !== 'getStatus' && method !== 'request' && method !== 'resumeAfterSettings') return { status: 'error' };
+    if (!args || typeof args.permission !== 'string' || !args.permission.trim()) return { status: 'error' };
+    const permission: string = args.permission;
     let status: GycPermissionStatus;
     if (method === 'request') {
       const context = this.controller?.getUIAbilityContext();
@@ -51,6 +56,8 @@ export class GycPermissionModule extends KuiklyRenderBaseModule {
       } finally {
         if (id) this.requests.delete(id);
       }
+    } else if (method === 'resumeAfterSettings') {
+      status = this.service.resumeAfterSettings(permission);
     } else {
       status = this.service.getStatus(permission);
     }

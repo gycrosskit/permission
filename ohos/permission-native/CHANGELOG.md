@@ -1,6 +1,12 @@
 # 更新日志
 
-## 1.0.0（未发布）
+## 2.0.0（待发布）
+
+- 新增 `GycPermissionHandler`、宿主能力 key 与 Service/Module 注入，未注册能力返回 `UNSUPPORTED`；保留内置权限和无参构造调用。
+- `GycPermissionStatus` 联合类型新增 `UNSUPPORTED`，穷举映射需更新；与 Maven `2.0.0` 配套，真实 SDK 构建、发布及 Registry 消费另验。
+- 三方法透传自定义能力，排队取消与已显示系统弹窗的真实回执屏障保持。
+
+## 1.0.0（2026-10-26）
 
 - Maven、iOS Pod 与 OHPM 统一版本为 1.0.0；同仓模块使用同版，Kuikly 配套保持 2.29.1。
 - 本地源码/产物消费与设备、远程发布验收分别记录；不覆盖旧标签或修改历史发布字节。

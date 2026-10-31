@@ -1,7 +1,10 @@
 package io.github.gycrosskit.permission
 
 import android.Manifest
+import android.app.Activity
 import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
 import androidx.activity.ComponentActivity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -26,7 +29,7 @@ import kotlin.test.assertTrue
 @Config(sdk = [28])
 class AndroidRuntimePermissionTest {
     @Test
-    fun `new denial stays denied and next request observes blocked history`() = runTest {
+    fun `first denial stays denied and a real retry without rationale suggests settings`() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         val controller = Robolectric.buildActivity(ComponentActivity::class.java).setup()
         val activity = controller.get()
@@ -34,13 +37,15 @@ class AndroidRuntimePermissionTest {
             val history = AndroidPermissionRequestHistory()
             val result = async { activity.requestRuntimePermission(Manifest.permission.CAMERA, history) }
             runCurrent()
-            val code = shadowOf(activity).lastRequestedPermission.requestCode
-            assertTrue(activity.activityResultRegistry.dispatchResult(code, false))
+            activity.deliverCameraResult(false)
             assertEquals(AndroidRuntimePermissionState.DENIED, result.await())
-            assertEquals(
-                AndroidRuntimePermissionState.REQUESTED_WITHOUT_RATIONALE,
-                activity.requestRuntimePermission(Manifest.permission.CAMERA, history),
-            )
+            assertTrue(history.wasRequested(activity, Manifest.permission.CAMERA))
+            assertFalse(activity.shouldShowRequestPermissionRationale(Manifest.permission.CAMERA))
+            val retry = async { activity.requestRuntimePermission(Manifest.permission.CAMERA, history) }
+            runCurrent()
+            assertFalse(retry.isCompleted, "settings hint requires another real platform request")
+            activity.deliverCameraResult(false)
+            assertEquals(AndroidRuntimePermissionState.SETTINGS_REQUIRED, retry.await())
         } finally {
             controller.destroy()
             Dispatchers.resetMain()
@@ -65,7 +70,7 @@ class AndroidRuntimePermissionTest {
             // 同一 Activity 的旧系统权限框仍在时，Android 拒绝新的并行申请；取消不能关闭该框。
             assertEquals(AndroidRuntimePermissionState.DENIED, newest.await())
             // AndroidX 可保留已 launch 的 requestCode 接收迟到系统结果；取消的回调不能复活。
-            activity.activityResultRegistry.dispatchResult(oldCode, true)
+            activity.activityResultRegistry.dispatchResult(oldCode, mapOf(Manifest.permission.CAMERA to true))
             assertTrue(old.isCancelled)
             assertEquals(AndroidRuntimePermissionState.DENIED, newest.await())
         } finally {
@@ -90,26 +95,55 @@ class AndroidRuntimePermissionTest {
     }
 
     @Test
-    fun `old explicit namespace and granted state bypass system request`() = runTest {
+    fun `revoked grant can be requested again with persistent history and no rationale`() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         val controller = Robolectric.buildActivity(ComponentActivity::class.java).setup()
         val activity = controller.get()
+        val namespace = "runtime_permission_test"
         try {
-            val namespace = "runtime_permission_test"
             activity.getSharedPreferences(namespace, Context.MODE_PRIVATE).edit()
                 .putBoolean(Manifest.permission.CAMERA, true).commit()
             val history = AndroidPermissionRequestHistory(namespace)
-            assertEquals(
-                AndroidRuntimePermissionState.REQUESTED_WITHOUT_RATIONALE,
-                activity.requestRuntimePermission(Manifest.permission.CAMERA, history),
-            )
             shadowOf(activity).grantPermissions(Manifest.permission.CAMERA)
             assertEquals(
                 AndroidRuntimePermissionState.GRANTED,
                 activity.requestRuntimePermission(Manifest.permission.CAMERA, history),
             )
-            assertTrue(AndroidPermissionRequestHistory(namespace).wasRequested(activity, Manifest.permission.CAMERA))
+            shadowOf(activity).denyPermissions(Manifest.permission.CAMERA)
+            val restoredHistory = AndroidPermissionRequestHistory(namespace)
+            assertTrue(restoredHistory.wasRequested(activity, Manifest.permission.CAMERA))
+            assertFalse(activity.shouldShowRequestPermissionRationale(Manifest.permission.CAMERA))
+            val result = async { activity.requestRuntimePermission(Manifest.permission.CAMERA, restoredHistory) }
+            runCurrent()
+            assertFalse(result.isCompleted, "old history must not bypass a new system request")
+            activity.deliverCameraResult(true)
+            assertEquals(AndroidRuntimePermissionState.GRANTED, result.await())
+        } finally {
             activity.getSharedPreferences(namespace, Context.MODE_PRIVATE).edit().clear().commit()
+            controller.destroy()
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    fun `history and empty result stay denied and do not block a later grant`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val controller = Robolectric.buildActivity(ComponentActivity::class.java).setup()
+        val activity = controller.get()
+        try {
+            val history = AndroidPermissionRequestHistory()
+            history.markRequested(activity, Manifest.permission.CAMERA)
+            val cancelled = async { activity.requestRuntimePermission(Manifest.permission.CAMERA, history) }
+            runCurrent()
+            shadowOf(activity).grantPermissions(Manifest.permission.CAMERA)
+            activity.deliverCameraResult(null)
+            assertEquals(AndroidRuntimePermissionState.DENIED, cancelled.await())
+            shadowOf(activity).denyPermissions(Manifest.permission.CAMERA)
+            val granted = async { activity.requestRuntimePermission(Manifest.permission.CAMERA, history) }
+            runCurrent()
+            assertFalse(granted.isCompleted)
+            activity.deliverCameraResult(true)
+            assertEquals(AndroidRuntimePermissionState.GRANTED, granted.await())
         } finally {
             controller.destroy()
             Dispatchers.resetMain()
@@ -117,9 +151,59 @@ class AndroidRuntimePermissionTest {
     }
 
     @Test
+    fun `rationale before or after retry keeps the result denied`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val controller = Robolectric.buildActivity(ComponentActivity::class.java).setup()
+        val activity = controller.get()
+        try {
+            val history = AndroidPermissionRequestHistory()
+            history.markRequested(activity, Manifest.permission.CAMERA)
+            for (before in listOf(false, true)) {
+                shadowOf(activity.packageManager).setShouldShowRequestPermissionRationale(Manifest.permission.CAMERA, before)
+                val result = async { activity.requestRuntimePermission(Manifest.permission.CAMERA, history) }
+                runCurrent()
+                shadowOf(activity.packageManager).setShouldShowRequestPermissionRationale(Manifest.permission.CAMERA, !before)
+                assertFalse(result.isCompleted, "each rationale case requires its own platform request")
+                activity.deliverCameraResult(false)
+                assertEquals(AndroidRuntimePermissionState.DENIED, result.await())
+            }
+        } finally {
+            controller.destroy()
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    fun `policy restriction is distinct from denial and real grant takes priority`() {
+        assertEquals(AndroidRuntimePermissionState.RESTRICTED,
+            resolveAndroidRuntimePermissionState(false, false, false, revokedByPolicy = true))
+        assertEquals(AndroidRuntimePermissionState.RESTRICTED,
+            resolveAndroidRuntimePermissionState(false, true, true, revokedByPolicy = true))
+        assertEquals(AndroidRuntimePermissionState.GRANTED,
+            resolveAndroidRuntimePermissionState(true, true, true, revokedByPolicy = true))
+    }
+
+    @Test
     fun `rationale takes priority over missing history`() {
         assertEquals(AndroidRuntimePermissionState.DENIED, resolveAndroidRuntimePermissionState(false, false, true))
         assertEquals(AndroidRuntimePermissionState.NOT_REQUESTED, resolveAndroidRuntimePermissionState(false, false, false))
         assertEquals(AndroidRuntimePermissionState.REQUESTED_WITHOUT_RATIONALE, resolveAndroidRuntimePermissionState(false, true, false))
+    }
+
+    private fun ComponentActivity.deliverCameraResult(granted: Boolean?) {
+        // 走 framework 回执以清除仍在申请的标记；直接 dispatchResult 会让下次申请被当成并行申请。
+        val permissions = if (granted == null) emptyArray() else arrayOf(Manifest.permission.CAMERA)
+        val results = when (granted) {
+            true -> intArrayOf(PackageManager.PERMISSION_GRANTED)
+            false -> intArrayOf(PackageManager.PERMISSION_DENIED)
+            null -> intArrayOf()
+        }
+        shadowOf(this).receiveResult(
+            shadowOf(this).nextStartedActivityForResult.intent,
+            Activity.RESULT_OK,
+            Intent()
+                .putExtra("android.content.pm.extra.REQUEST_PERMISSIONS_NAMES", permissions)
+                .putExtra("android.content.pm.extra.REQUEST_PERMISSIONS_RESULTS", results),
+        )
     }
 }

@@ -53,7 +53,7 @@ test('权限状态、粗略定位和系统申请', async () => {
   assert.deepEqual(Array.from(requests[2]), ['ohos.permission.APPROXIMATELY_LOCATION', 'ohos.permission.LOCATION']);
   values.set('ohos.permission.CAMERA', 999);
   assert.throws(() => service.getStatus('CAMERA'), /Unsupported permission status/);
-  assert.throws(() => service.getStatus('UNKNOWN'));
+  assert.equal(service.getStatus('UNKNOWN'), 'UNSUPPORTED');
 });
 
 
@@ -86,10 +86,13 @@ test('权限桥校验输入并在销毁后抑制迟到授权回执', async () =>
   const bridge = new bridgeExports.GycPermissionModule(), values = [];
   const invoke = (method, params) => bridge.call(method, params, value => values.push(value.status));
   const flush = async () => { for (let i = 0; i < 8; i++) await Promise.resolve(); };
-  for (const params of ['{', 'null', '{}', '{"permission":"UNKNOWN"}']) invoke('request', params);
+  for (const params of ['{', 'null', '{}']) invoke('request', params);
   invoke('unknown', '{"permission":"CAMERA"}');
   await flush();
-  assert.deepEqual(values, ['error', 'error', 'error', 'error', 'error']);
+  assert.deepEqual(values, ['error', 'error', 'error', 'error']);
+  invoke('getStatus', '{"permission":"UNKNOWN"}');
+  await flush();
+  assert.equal(values.at(-1), 'UNSUPPORTED');
   assert.equal(requests, 0, 'invalid bridge input cannot reach system permission dialog');
   bridge.controller = null;
   invoke('getStatus', '{"permission":"CAMERA"}');
@@ -174,4 +177,47 @@ test('本地取消只撤销排队申请，不释放已显示系统弹窗的屏�
   assert.deepEqual(calls[1].names, ['ohos.permission.APPROXIMATELY_LOCATION', 'ohos.permission.LOCATION']);
   calls[1].resolve(); await flush();
   assert.equal(calls.length, 2, 'destroyed queued page never starts a dialog');
+});
+
+
+test('宿主扩展从注册表透传到每页桥；未知能力明确unsupported且不覆盖内置', async () => {
+  const serviceExports = {}, bridgeExports = {}, calls = [];
+  vm.runInNewContext(compiled, { exports: serviceExports, require: () => ({ abilityAccessCtrl: {
+    PermissionStatus: { GRANTED: 0, NOT_DETERMINED: 1 },
+    createAtManager: () => ({ getSelfPermissionStatus: () => 0,
+      requestPermissionsFromUser: () => { throw new Error('unexpected builtin prompt'); } })
+  } }) });
+  const bridgeSource = fs.readFileSync(path.join(__dirname, '../src/main/ets/GycPermissionModule.ets'), 'utf8');
+  vm.runInNewContext(ts.transpileModule(bridgeSource, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 }
+  }).outputText, { exports: bridgeExports, require: name => name === './GycPermissionService' ? serviceExports : {
+    KuiklyRenderBaseModule: class { controller = { getUIAbilityContext: () => ({ owner: 'host' }) }; onDestroy() {} }
+  } });
+  const handler = {
+    getStatus: () => { calls.push('getStatus'); return 'NOT_DETERMINED'; },
+    request: async context => { assert.equal(context.owner, 'host'); calls.push('request'); return 'LIMITED'; },
+    resumeAfterSettings: () => { calls.push('resumeAfterSettings'); return 'RESTRICTED'; }
+  };
+  const handlers = new Map([['PHOTO_LIBRARY', handler]]);
+  const service = new serviceExports.GycPermissionService(handlers);
+  handlers.clear();
+  assert.throws(() => new serviceExports.GycPermissionService(new Map([['CAMERA', handler]])), /must not replace/);
+  assert.throws(() => new serviceExports.GycPermissionService(new Map([[' ', handler]])), /non-blank/);
+  class HostPermissionModule extends bridgeExports.GycPermissionModule { constructor() { super(service); } }
+  const bridge = new HostPermissionModule();
+  const invoke = (method, permission) => new Promise(resolve => {
+    bridge.call(method, JSON.stringify({ permission, requestId: method + permission }), value => resolve(value.status));
+  });
+  assert.equal(await invoke('getStatus', 'PHOTO_LIBRARY'), 'NOT_DETERMINED');
+  assert.equal(await invoke('request', 'PHOTO_LIBRARY'), 'LIMITED');
+  assert.equal(await invoke('resumeAfterSettings', 'PHOTO_LIBRARY'), 'RESTRICTED');
+  assert.deepEqual(calls, ['getStatus', 'request', 'resumeAfterSettings']);
+  assert.equal(await invoke('getStatus', 'CAMERA'), 'GRANTED');
+  assert.equal(await invoke('request', 'CAMERA'), 'GRANTED');
+  assert.equal(await invoke('resumeAfterSettings', 'CAMERA'), 'GRANTED');
+  for (const method of ['getStatus', 'request', 'resumeAfterSettings']) {
+    assert.equal(await invoke(method, 'UNKNOWN'), 'UNSUPPORTED');
+    assert.equal(await invoke(method, 'ohos.permission.READ_IMAGEVIDEO'), 'UNSUPPORTED');
+  }
+  bridge.onDestroy();
 });
