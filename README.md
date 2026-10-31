@@ -1,21 +1,16 @@
 # GY CrossKit Permission
 
-> 本轮是基于既有 **1.0.0** 的未发布改动，新版本号待验证后冻结；下方 `1.0.0` 坐标不包含本轮修复和新增能力。源码消费、各渠道产物与真机行为分别验证。
+> 当前 Maven 候选 **2.0.0** 尚未发布；下方 Maven 坐标须在发布并通过公开消费后使用。既有 `1.0.0` 不包含本轮改动，源码、公开消费与真机验收分别记录。
 
 当前源码配套 Kuikly 2.29.1；历史 Tag 与验收记录保持原范围。新增 API 必须消费本轮配套源码，不能用旧远程版本代替验证。
 
-已发布基线 Maven `0.1.9` 提供 `permission-kuikly` Android、iosArm64、iosX64、iosSimulatorArm64 targets、原生 receiver 和每 Renderer handler。iOS 可选 Pod `GycPermissionKuikly/Kuikly` `0.1.9` 使用真实 `OpenKuiklyIOSRender 2.28.0`；Kotlin handler 由宿主已有 Shared framework 导出。发布与远程消费状态以[对应 Release](https://github.com/gycrosskit/permission/releases/tag/0.1.9)为准。历史基线 Maven `0.1.8` 的 `-kuikly` 仅含 OHOS 变体；原 HAR 沿用。宿主需注册并维护已有原生能力 owner，示例见[接入指南](docs/接入指南.md#androidios-kuikly-native-module)。
-
+本轮配套：HAR 候选 `2.0.0`；iOS Git Pod 沿用精确 tag `1.0.0`（receiver 源码未变），不代表 CocoaPods Specs 发布。既有 [Maven 1.0.0](https://github.com/gycrosskit/permission/releases/tag/1.0.0) 与 [HAR 1.0.0](https://github.com/gycrosskit/permission/releases/tag/har-1.0.0) 保留原 Tag 和字节；OHPM Registry 是否可安装须独立核验。
 
 ## 当前功能与平台边界
 
 core 内置相机、麦克风、前台定位，提供六种权限状态（含未注册能力的 `UNSUPPORTED`）及申请/恢复；不提供页面 UI，permission-kuikly包含三端 Module 与 Android/iOS receiver，复用宿主已有原生 owner。
 
-历史发布基线：Maven 0.1.8；HAR 0.1.6沿用原字节。远程验收以固定 Release 结果为准。本次修复与平台边界见[功能与平台差异](docs/功能与平台差异.md)，构建与渠道验收见[版本发布记录](https://github.com/gycrosskit/permission/releases/tag/0.1.8)；下方旧版本记录保留其历史范围。
-
 当前测试覆盖、执行时点和未验收项集中见[验证范围](docs/功能与平台差异.md#验证范围)，复现命令见[开发与验证](docs/开发与验证.md)。
-
-此版本包含已复核的跨端行为修复；[历史源码候选记录](docs/跨端行为候选.md)和下方旧版验收保持其原时点，当前范围见顶部功能与平台差异。
 
 [历史完整源码审查](docs/完整源码审查.md) 列出全部生产文件、公开调用链、实际验证与未测项。
 
@@ -114,6 +109,8 @@ classDiagram
 
 ## 安装
 
+以下 Maven 示例针对本轮候选；公开发布与精确版本消费通过前，不视为可用的远程坐标。
+
 ```kotlin
 // settings.gradle.kts
 dependencyResolutionManagement {
@@ -135,18 +132,18 @@ dependencyResolutionManagement {
 ```kotlin
 // build.gradle.kts: kotlin.sourceSets
 commonMain.dependencies {
-    implementation("com.github.gycrosskit.permission:permission-core:1.0.0")
+    implementation("com.github.gycrosskit.permission:permission-core:2.0.0")
 }
 // HarmonyOS Kuikly 宿主额外添加
 ohosArm64Main.dependencies {
-    implementation("com.github.gycrosskit.permission:permission-kuikly:1.0.0")
+    implementation("com.github.gycrosskit.permission:permission-kuikly:2.0.0")
 }
 ```
 
-HarmonyOS 原生包独立安装，不由 Maven 依赖自动携带；下方 HAR `1.0.0` 坐标属于既有版本，不包含本轮改动。新版本 Registry 消费另验；历史固定 [0.1.6 Release HAR](https://github.com/gycrosskit/permission/releases/tag/0.1.6) 消费分别验收，实际状态见顶部版本发布记录：
+HarmonyOS 原生包独立安装，不由 Maven 依赖自动携带。本轮 HAR 候选 `2.0.0` 需配套新的能力 key 与状态协议；下方命令须在 Registry 上架后执行，Release HAR 下载不代表 Registry 可安装。
 
 ```sh
-ohpm install @gycrosskit/permission-native@1.0.0
+ohpm install @gycrosskit/permission-native@2.0.0
 ```
 
 ## 最小使用

@@ -1,17 +1,15 @@
 # @gycrosskit/permission-native
 
-> 本轮为未发布改动；新增能力与修复须消费对应候选源码，各渠道版本及验收范围以根 README 和实际回执为准。既有版本坐标不包含本轮改动，源码编译不代表发布消费或真机通过。
+> 当前 HAR 候选 **2.0.0** 尚未发布，配套 Maven `2.0.0` 的能力 key/状态协议。新增 `UNSUPPORTED` 后，穷举状态映射须补齐；未注册能力不引导设置恢复。
 
-适用版本：此版 Maven `0.1.7` 复用已发布 HAR `0.1.6` 的原字节。完整功能与五入口限制见[功能与平台差异](https://github.com/gycrosskit/permission/blob/0.1.7/docs/功能与平台差异.md)；本版发布记录见[Release](https://github.com/gycrosskit/permission/releases/tag/0.1.7)。此源码 README 的文档更新不重新发布或修改既有 HAR。
-
-HAR `0.1.6` 已发布；Registry 精确安装与固定 Release HAR 消费分别验收，不以一个渠道代替另一个。
+下方 Registry 命令须在精确版本上架后执行；提交审核、固定 Release HAR 下载与 Registry 安装分别核验。既有 [HAR 1.0.0](https://github.com/gycrosskit/permission/releases/tag/har-1.0.0) 保留原 Tag 和字节，不包含本轮扩展。
 
 相机、麦克风和前台定位权限状态与申请。当前 HAR target/compatible SDK 为 HarmonyOS API 22。
 
 已公开导出 GycPermission / GycPermissionStatus / GycPermissionHandler；既有渠道历史状态见根 README。Android 运行时权限执行器属于 Maven permission-core，不在本 HAR。
 
 ```sh
-ohpm install @gycrosskit/permission-native@1.0.0
+ohpm install @gycrosskit/permission-native@2.0.0
 ```
 
 ```typescript
