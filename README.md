@@ -1,25 +1,20 @@
 # GY CrossKit Permission
 
-> 当前源码候选统一为 **1.0.0**：Maven（core/Kuikly）、iOS Pod 与 OHPM 使用同版；尚未发布，示例坐标须待发布后远程消费。本地验证使用显式源码/本地 HAR，Kuikly 基线为 2.29.1，真机与新版本远程消费另验。
+> 当前 Maven 候选 **2.0.0** 尚未发布；下方 Maven 坐标须在发布并通过公开消费后使用。既有 `1.0.0` 不包含本轮改动，源码、公开消费与真机验收分别记录。
 
-当前源码为未发布的 Kuikly 2.29.1 配套候选；带发布标签的说明保留历史范围。新增 API 必须消费配套源码，不能用旧远程版本验证代替。
+当前源码配套 Kuikly 2.29.1；历史 Tag 与验收记录保持原范围。新增 API 必须消费本轮配套源码，不能用旧远程版本代替验证。
 
-已发布基线 Maven `0.1.9` 提供 `permission-kuikly` Android、iosArm64、iosX64、iosSimulatorArm64 targets、原生 receiver 和每 Renderer handler。iOS 可选 Pod `GycPermissionKuikly/Kuikly` `0.1.9` 使用真实 `OpenKuiklyIOSRender 2.28.0`；Kotlin handler 由宿主已有 Shared framework 导出。发布与远程消费状态以[对应 Release](https://github.com/gycrosskit/permission/releases/tag/0.1.9)为准。历史基线 Maven `0.1.8` 的 `-kuikly` 仅含 OHOS 变体；原 HAR 沿用。宿主需注册并维护已有原生能力 owner，示例见[接入指南](docs/接入指南.md#androidios-kuikly-native-module)。
-
+本轮配套：HAR 候选 `2.0.0`；iOS Git Pod 沿用精确 tag `1.0.0`（receiver 源码未变），不代表 CocoaPods Specs 发布。既有 [Maven 1.0.0](https://github.com/gycrosskit/permission/releases/tag/1.0.0) 与 [HAR 1.0.0](https://github.com/gycrosskit/permission/releases/tag/har-1.0.0) 保留原 Tag 和字节；OHPM Registry 是否可安装须独立核验。
 
 ## 当前功能与平台边界
 
-core 提供相机、麦克风、前台定位的五种权限状态及申请/恢复；不提供页面 UI，permission-kuikly包含三端 Module 与 Android/iOS receiver，复用宿主已有原生 owner。
-
-历史发布基线：Maven 0.1.8；HAR 0.1.6沿用原字节。远程验收以固定 Release 结果为准。本次修复与平台边界见[功能与平台差异](docs/功能与平台差异.md)，构建与渠道验收见[版本发布记录](https://github.com/gycrosskit/permission/releases/tag/0.1.8)；下方旧版本记录保留其历史范围。
+core 内置相机、麦克风、前台定位，提供六种权限状态（含未注册能力的 `UNSUPPORTED`）及申请/恢复；不提供页面 UI，permission-kuikly包含三端 Module 与 Android/iOS receiver，复用宿主已有原生 owner。
 
 当前测试覆盖、执行时点和未验收项集中见[验证范围](docs/功能与平台差异.md#验证范围)，复现命令见[开发与验证](docs/开发与验证.md)。
 
-此版本包含已复核的跨端行为修复；[历史源码候选记录](docs/跨端行为候选.md)和下方旧版验收保持其原时点，当前范围见顶部功能与平台差异。
-
 [历史完整源码审查](docs/完整源码审查.md) 列出全部生产文件、公开调用链、实际验证与未测项。
 
-相机、麦克风和前台定位的权限状态查询与申请。宿主负责申请时机、说明文案、系统权限声明和应用设置页跳转。
+相机、麦克风和前台定位的权限状态查询与申请。宿主可通过 `PermissionRegistry` / `PermissionHandler` 注册其它能力 key，旧 `AppPermission` 调用保持兼容；Kuikly 三端透传同一 key，未注册返回 `UNSUPPORTED`。key 表示能力，不是跨平台 Manifest 权限串，注册与各端原生实现见[接入指南](docs/接入指南.md#宿主扩展能力)。宿主负责申请时机、说明文案、系统权限声明和应用设置页跳转。
 
 此版本将 Android `isPermissionRevokedByPolicy` 映射为 `RESTRICTED`；已有完整/粗略授权优先，设备策略限制不引导为普通设置恢复。
 
@@ -114,6 +109,8 @@ classDiagram
 
 ## 安装
 
+以下 Maven 示例针对本轮候选；公开发布与精确版本消费通过前，不视为可用的远程坐标。
+
 ```kotlin
 // settings.gradle.kts
 dependencyResolutionManagement {
@@ -135,18 +132,18 @@ dependencyResolutionManagement {
 ```kotlin
 // build.gradle.kts: kotlin.sourceSets
 commonMain.dependencies {
-    implementation("com.github.gycrosskit.permission:permission-core:1.0.0")
+    implementation("com.github.gycrosskit.permission:permission-core:2.0.0")
 }
 // HarmonyOS Kuikly 宿主额外添加
 ohosArm64Main.dependencies {
-    implementation("com.github.gycrosskit.permission:permission-kuikly:1.0.0")
+    implementation("com.github.gycrosskit.permission:permission-kuikly:2.0.0")
 }
 ```
 
-HarmonyOS 原生包独立安装，不由 Maven 依赖自动携带；当前 HAR 目标为 `1.0.0`（未发布）。新版本 Registry 消费另验；历史固定 [0.1.6 Release HAR](https://github.com/gycrosskit/permission/releases/tag/0.1.6) 消费分别验收，实际状态见顶部版本发布记录：
+HarmonyOS 原生包独立安装，不由 Maven 依赖自动携带。本轮 HAR 候选 `2.0.0` 需配套新的能力 key 与状态协议；下方命令须在 Registry 上架后执行，Release HAR 下载不代表 Registry 可安装。
 
 ```sh
-ohpm install @gycrosskit/permission-native@1.0.0
+ohpm install @gycrosskit/permission-native@2.0.0
 ```
 
 ## 最小使用
@@ -172,20 +169,21 @@ val cameraHistory = AndroidPermissionRequestHistory() // 每个 picker 一个实
 // 旧写相册权限的历史对象由宿主进程范围持有并注入，避免替换 saver 时丢失申请事实。
 val state = activity.requestRuntimePermission(android.Manifest.permission.CAMERA, cameraHistory)
 // 宿主映射 AndroidRuntimePermissionState 到 MediaPermissionState：
-// GRANTED -> GRANTED；REQUESTED_WITHOUT_RATIONALE -> BLOCKED；其余 -> DENIED。
+// GRANTED 可用；SETTINGS_REQUIRED 可提示设置恢复；RESTRICTED 不引导设置；其它按拒绝处理。
 ```
 
 默认历史仅在对象实例内；传 `preferencesName` 可沿用旧 namespace 持久化，同一历史对象可由多个调用方共享。
 `AndroidPermissionPlatform(requestHistory = history)` 也支持显式注入，原 `historyPreferencesName` 参数保持。
-首次/仍有 rationale 时申请；刚拒绝返回 DENIED，下次主动申请才根据历史与 rationale 返回
-REQUESTED_WITHOUT_RATIONALE。协程取消、结果交付和启动失败均注销本次 ActivityResult launcher。
+已授权或受系统策略限制时直接返回；其余状态在用户主动操作时发起一次系统申请，包括一次授权失效后的再次申请。
+申请前已是 REQUESTED_WITHOUT_RATIONALE，实际重试明确拒绝且回执后仍无 rationale 时返回 SETTINGS_REQUIRED，宿主可提供设置恢复入口；它不是永久拒绝证明，也不阻止后续再次申请。首次拒绝、有 rationale 或空回执返回 DENIED，系统策略限制返回 RESTRICTED。旧 REQUESTED_WITHOUT_RATIONALE 仍只是查询时的历史推断，不能作为设置提示依据。
+协程取消、结果交付和启动失败均注销本次 ActivityResult launcher。
 此执行器不提供相册权限管理、设置导航或媒体业务映射，旧系统 WRITE_EXTERNAL_STORAGE 仍由宿主按需声明。
 
 ## 权限与生命周期
 
 Android 权限 Launcher 注册/启动失败会完整释放本次等待并传播异常，只在系统受理后记录申请历史；HAR 入口导出 `GycPermission` / `GycPermissionStatus` 类型。
 
-状态为 `NOT_DETERMINED / GRANTED / LIMITED / DENIED / RESTRICTED`；`LIMITED` 表示可用但受限，例如粗略定位。Android `DENIED` 不等于永久拒绝，设置返回后调用 `resumeAfterSettings` 重新判断。Android 宿主解绑会让属于该页面的挂起申请失败；取消协程不能强制关闭系统授权弹窗，迟到结果不会交给新请求。
+状态为 `NOT_DETERMINED / GRANTED / LIMITED / DENIED / RESTRICTED / UNSUPPORTED`；`LIMITED` 表示可用但受限，例如粗略定位。Android `DENIED` 不等于永久拒绝，设置返回后调用 `resumeAfterSettings` 重新判断。Android 宿主解绑会让属于该页面的挂起申请失败；取消协程不能强制关闭系统授权弹窗，迟到结果不会交给新请求。
 
 Android Manifest 按需声明 `CAMERA`、`RECORD_AUDIO`、`ACCESS_COARSE_LOCATION`、`ACCESS_FINE_LOCATION`；iOS Info.plist 按需填写 `NSCameraUsageDescription`、`NSMicrophoneUsageDescription`、`NSLocationWhenInUseUsageDescription`，缺少声明可能导致系统终止应用。HarmonyOS 声明实际使用的相机、麦克风或前台定位权限。Kuikly Module 每页一个实例，页面结束时调用 `dispose()`。
 
@@ -214,7 +212,7 @@ Apache-2.0，见 [LICENSE](LICENSE)。
 
 候选冻结与消费按[发布流程](https://github.com/gycrosskit/.github/blob/main/docs/发布流程.md)使用独立 Job：`component-ci/package` 绑定准确 SOURCE_SHA 生成冻结候选并验证私有消费，`component-ci/release` 绑定准确 Tag/候选执行发布及独立公开消费。核对冻结归档、精确 tag/commit、完整 publication 清单和公开文件，不使用 `mavenLocal`、本库源码或 staging 替换公开依赖；各阶段证据分别记录。
 
-OHOS KLIB 编译不代表 HAR 构建、ohpm 上架或真机验收。当前没有已确认可用的 DevEco/Hvigor runner，这些检查尚未自动化，不能作为 CI 通过范围。
+OHOS KLIB 编译不代表 HAR 构建、ohpm 上架或真机验收。HAR 通过统一入口独立构建与消费，各阶段以对应准确源码 SHA 的回执为准。
 
 阶段、缓存、有限网络重试、失败记录与证据边界见[共用 CI 规则](https://github.com/gycrosskit/.github/blob/main/docs/持续集成门禁.md)；本库实际平台命令以 Jenkins 的固定版本 recipe 为准。源码通过、远程消费、HAR/ohpm 与设备验收分别记录。
 

@@ -1,6 +1,13 @@
 # 更新日志
 
-## 1.0.0（未发布）
+## 2.0.0（待发布）
+
+- 新增宿主能力 key、`PermissionRegistry` / `PermissionHandler` 与可配置的 `requestWithFlow`；旧 `AppPermission` 三方法保留。
+- major 迁移：`PermissionStatus` 新增 `UNSUPPORTED`，Android 执行器新增 `RESTRICTED` / `SETTINGS_REQUIRED`；消费者穷举分支需更新。`IosPermissionModuleHandler` 构造参数由 `IosPermissionPlatform` 替换为 `PermissionPlatform`，旧构造 ABI 不保留，须重建宿主 Shared framework。
+- Android 一次授权失效后允许再次申请；设置恢复提示基于实际重试的明确拒绝，不由旧历史或空回执推断。桥接取消覆盖扩展查询，真实系统申请屏障仍归原生 owner。
+- Maven 与 HAR 配套 `2.0.0`；Swift receiver 源码未变，Git Pod 保留精确 tag `1.0.0`。新版本 SDK 回归、冻结产物、发布与公开消费另验；迁移见[接入指南](docs/接入指南.md#从-100-迁移到-200)。
+
+## 1.0.0（2026-10-26）
 
 - Maven、iOS Pod 与 OHPM 统一版本为 1.0.0；同仓模块使用同版，Kuikly 配套保持 2.29.1。
 - 本地源码/产物消费与设备、远程发布验收分别记录；不覆盖旧标签或修改历史发布字节。
