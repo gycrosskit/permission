@@ -1,5 +1,11 @@
 # 更新日志
 
+## Native 1.0.1 / HAR 2.0.1
+
+- iOS Git Pod 使用 `native-1.0.1`，HAR/OHPM 使用 `har-2.0.1`；Maven 保留 `2.0.0`，不重发未修改的 KMP 产物。
+- Renderer 版本由宿主选择：Pod 声明 `>= 2.29.1, < 3.0`，HAR 声明 `^2.29.1`；范围不代替实际消费验证。
+- 旧 Tag/归档/摘要保持不变；发布与精确公开消费状态见对应 Release，设备验收单独记录。
+
 ## 2.0.0（待发布）
 
 - 新增 `GycPermissionHandler`、宿主能力 key 与 Service/Module 注入，未注册能力返回 `UNSUPPORTED`；保留内置权限和无参构造调用。
