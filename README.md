@@ -2,11 +2,9 @@
 
 Kuikly 由宿主统一选择版本；组件构建基线、允许范围及消费验证边界见[功能与平台差异](docs/功能与平台差异.md#kuikly-版本与宿主选择)。
 
-> iOS Git Pod `1.0.1`（`native-1.0.1`），HAR/OHPM `2.0.1`（`har-2.0.1`）；Maven 保留 `2.0.0`。发布与精确消费状态见对应 Release；旧 Tag、归档及摘要不变。
+> 统一版本候选 `2.0.1`：Maven 与 iOS Git Pod（`native-2.0.1`）待发布；HAR/OHPM 沿用已发布的 `har-2.0.1`，不重发。Native receiver 与 `native-1.0.1` 源码相同，版本号统一不改变公开 API，也不表示各平台 API 完全相同；新渠道构建与公开消费另验。
 
-组件构建最低基线为 Kuikly 2.29.1；允许范围、宿主选择及 2.30 消费边界见[功能与平台差异](docs/功能与平台差异.md#kuikly-版本与宿主选择)。历史 Tag 与验收记录保持原范围。
-
-本版 HAR/OHPM 为 `2.0.1`（`har-2.0.1`）；iOS Git Pod 为 `1.0.1`（`native-1.0.1`），receiver 实现不变，不代表 CocoaPods Specs 发布。既有 [Maven 1.0.0](https://github.com/gycrosskit/permission/releases/tag/1.0.0) 与 [HAR 1.0.0](https://github.com/gycrosskit/permission/releases/tag/har-1.0.0) 保留原 Tag 和字节；OHPM Registry 是否可安装须独立核验。
+本轮只补齐 Maven/Git Pod 版本；Git Pod 不代表 CocoaPods Specs 发布。既有 [Maven 1.0.0](https://github.com/gycrosskit/permission/releases/tag/1.0.0) 与 [HAR 1.0.0](https://github.com/gycrosskit/permission/releases/tag/har-1.0.0) 保留原 Tag 和字节；OHPM Registry 是否可安装须独立核验。
 
 ## 当前功能与平台边界
 
@@ -134,15 +132,15 @@ dependencyResolutionManagement {
 ```kotlin
 // build.gradle.kts: kotlin.sourceSets
 commonMain.dependencies {
-    implementation("com.github.gycrosskit.permission:permission-core:2.0.0")
+    implementation("com.github.gycrosskit.permission:permission-core:2.0.1")
 }
 // HarmonyOS Kuikly 宿主额外添加
 ohosArm64Main.dependencies {
-    implementation("com.github.gycrosskit.permission:permission-kuikly:2.0.0")
+    implementation("com.github.gycrosskit.permission:permission-kuikly:2.0.1")
 }
 ```
 
-HarmonyOS 原生包独立安装，不由 Maven 依赖自动携带。HAR `2.0.1` 配套 Maven `2.0.0` 的能力 key 与状态协议；下方命令须在 Registry 上架后执行，Release HAR 下载不代表 Registry 可安装。
+HarmonyOS 原生包独立安装，不由 Maven 依赖自动携带。既有 HAR `2.0.1` 与 Maven 候选 `2.0.1` 保持原有能力 key 与状态协议；下方命令须在 Registry 上架后执行，Release HAR 下载不代表 Registry 可安装。
 
 ```sh
 ohpm install @gycrosskit/permission-native@2.0.1
