@@ -1,5 +1,11 @@
 # 更新日志
 
+## 2.0.1（统一版本候选，未发布）
+
+- Maven 与 Git Pod 补齐至 2.0.1；HAR/OHPM 沿用既有 har-2.0.1，不重新构建或提交。
+- Git Pod receiver 与 native-1.0.1 源码完全相同，Native 1.x → 2.0.1 仅统一渠道编号；Maven 2.0 已有枚举/handler ABI 迁移要求继续保留，宿主 Shared framework 仍须按实际依赖重建。
+- 保留 dev 的 JDK21 构建配置，源码 JVM 目标不变；候选构建、冻结摘要与公开消费另验，旧标签和历史发行记录保留。
+
 ## Native 1.0.1 / HAR 2.0.1
 
 - iOS Git Pod 使用 `native-1.0.1`，HAR/OHPM 使用 `har-2.0.1`；Maven 保留 `2.0.0`，不重发未修改的 KMP 产物。
