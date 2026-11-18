@@ -1,8 +1,8 @@
 # @gycrosskit/permission-native
 
-> iOS Git Pod `1.0.1`（`native-1.0.1`），HAR/OHPM `2.0.1`（`har-2.0.1`）；Maven 保留 `2.0.0`。发布与精确消费状态见对应 Release；旧 Tag、归档及摘要不变。
+> iOS Git Pod `1.0.1`（`native-1.0.1`），私有 OHPM `2.0.1`，Maven `2.0.0`。发布与精确消费状态见对应发布回执。
 
-发布与消费状态见对应 Release；下方 Registry 命令须在精确版本上架后执行；提交审核、固定 Release HAR 下载与 Registry 安装分别核验。既有 [HAR 1.0.0](https://github.com/gycrosskit/permission/releases/tag/har-1.0.0) 保留原 Tag 和字节，不包含本轮扩展。
+鸿蒙包通过私有 OHPM 发布，使用前核对精确版本 Jenkins 回执与 Registry 安装结果。
 
 相机、麦克风和前台定位权限状态与申请。当前 HAR target/compatible SDK 为 HarmonyOS API 22。
 
