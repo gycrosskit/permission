@@ -32,82 +32,9 @@ KMP 产物使用 Kotlin `2.2.21-1.0.0`、coroutines `1.10.2-1.0.0`；Kuikly 为 
 
 ## 架构与调用流程
 
-`permission-core` 定义权限与状态；Android/iOS 实现负责系统申请，HarmonyOS 通过 Kuikly Module 或直接调用 HAR。宿主负责权限声明、申请时机与设置导航。
+`PermissionPlatform` 统一状态查询、申请与设置恢复，Android/iOS 使用宿主原生 owner，OHOS 经 HAR 服务与 `GycPermissionModule` 接线。`PermissionRegistry` 按能力 key 扩展，宿主负责申请时机和说明 UI。
 
-```mermaid
-flowchart TB
-    Host[宿主] --> Core[permission-core<br/>PermissionPlatform]
-    Core --> Android[Android<br/>AndroidPermissionPlatform]
-    Core --> IOS[iOS<br/>IosPermissionPlatform]
-    Core --> Module[permission-kuikly<br/>PermissionModule]
-    Android --> Result[ActivityResult<br/>系统权限]
-    IOS --> Apple[AVFoundation<br/>CoreLocation]
-    Module --> AndroidReceiver[Android Kuikly receiver]
-    AndroidReceiver --> Android
-    Module --> IosReceiver[iOS Kuikly receiver]
-    IosReceiver --> IOS
-    Module --> Native[HAR<br/>GycPermissionModule]
-    Host --> Service[HAR<br/>GycPermissionService]
-    Native --> Service
-    Service --> System[abilityAccessCtrl]
-```
-
-Android 申请串行执行；已经可用的权限直接返回，否则等待系统回调。协程取消不关闭系统弹窗，下次申请仍需等待真实回调或宿主解绑。
-
-```mermaid
-sequenceDiagram
-    participant Host as 宿主
-    participant Platform as AndroidPermissionPlatform
-    participant System as ActivityResult / 系统
-    Host->>Platform: bind(activity)
-    Host->>Platform: request(permission)
-    Platform->>Platform: 获取互斥锁，等待旧系统请求结束
-    Platform->>Platform: 查询权限与申请历史
-    alt 已可用或受限于系统策略
-        Platform-->>Host: 当前 PermissionStatus
-    else 需要申请
-        Platform->>System: 独立 key 注册并 launch
-        System-->>Platform: 权限回调
-        Platform->>Platform: 注销 launcher，清空请求
-        Platform-->>Host: PermissionStatus（协程仍有效）
-    end
-    Note over Host,Platform: unbind 会清理该 Activity 的请求并令挂起调用失败
-```
-
-核心类型仅展示 KMP 公共契约与实现；虚线箭头表示依赖，空心三角指向被实现的接口。
-
-```mermaid
-classDiagram
-    direction LR
-    class PermissionPlatform {
-        <<interface>>
-        +getStatus(permission) PermissionStatus
-        +request(permission) PermissionStatus
-        +resumeAfterSettings(permission) PermissionStatus
-    }
-    class AndroidPermissionPlatform {
-        +bind(activity)
-        +unbind(activity)
-    }
-    class IosPermissionPlatform
-    class PermissionModule {
-        +dispose()
-    }
-    class AppPermission {
-        <<enumeration>>
-    }
-    class PermissionStatus {
-        <<enumeration>>
-        +allowsUse Boolean
-    }
-    PermissionPlatform <|.. AndroidPermissionPlatform
-    PermissionPlatform <|.. IosPermissionPlatform
-    PermissionPlatform <|.. PermissionModule
-    PermissionPlatform ..> AppPermission : 输入
-    PermissionPlatform ..> PermissionStatus : 返回
-```
-
-源码：[公共入口与 AppPermission](permission-core/src/commonMain/kotlin/io/github/gycrosskit/permission/PermissionPlatform.kt)、[PermissionStatus](permission-core/src/commonMain/kotlin/io/github/gycrosskit/permission/PermissionStatus.kt)、[Android 实现](permission-core/src/androidMain/kotlin/io/github/gycrosskit/permission/AndroidPermissionPlatform.kt)、[iOS 实现](permission-core/src/iosMain/kotlin/io/github/gycrosskit/permission/IosPermissionPlatform.kt)、[Kuikly Module](permission-kuikly/src/commonMain/kotlin/io/github/gycrosskit/permission/kuikly/PermissionModule.kt)、[HAR Module](ohos/permission-native/src/main/ets/GycPermissionModule.ets)、[HAR Service](ohos/permission-native/src/main/ets/GycPermissionService.ets)。
+系统弹窗的真实回执屏障、状态差异和取消合同见[功能与平台差异](docs/功能与平台差异.md)，接线见[接入指南](docs/接入指南.md)。源码职责和关系统一由 [AOCI 索引](aoci.txt)维护。
 
 ## 安装
 

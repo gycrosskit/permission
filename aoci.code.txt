@@ -1,0 +1,171 @@
+#AOCI-CODE-VOLUME: 1
+
+===/Users/guoyang/.codex/worktrees/aoci-permission/permission/===
+.gitattributes[FV4T]: F:统一文本LF检出以保持AOCI原始字节摘要跨平台一致 | R:- | A:- | S:二进制保持原字节
+.gitignore[FV4T]: F:排除Gradle、Native、OHOS缓存及本机与CI下发配置 | R:- | A:- | S:-
+AGENTS.md[SQ7L]: F:约束权限状态、Main owner清理和取消屏障，并定义AOCI读取维护合同 | R:code:permission-core/src/androidMain/kotlin/io/github/gycrosskit/permission/AndroidPermissionPlatform.kt | A:- | S:LIMITED可用而RESTRICTED不能引导普通设置恢复；旧Activity回调不得交付新请求，取消不提前放行系统弹窗
+CHANGELOG.md[SV4T]: F:按版本记录权限扩展key、状态和ABI迁移与渠道候选边界 | R:- | A:- | S:Maven2.0增加枚举与handler ABI迁移，宿主须重建Shared framework
+GycPermissionKuikly.podspec[FV6T]: F:定义iOS权限receiver Pod源码、不可变native Tag和Renderer允许范围 | R:code:iosApp/Sources/GycPermissionKuikly/GycPermissionModule.swift | A:GycPermissionKuikly/Kuikly | S:最低iOS14；Renderer范围不保证所有未来2.x ABI
+LICENSE[SS2M]: F:规定Apache2许可、分发条件与免责条款 | R:- | A:- | S:-
+README.md[SI7S]: F:提供权限能力、三端安装和最小使用并链接AOCI与状态合同 | R:code:permission-core/src/commonMain/kotlin/io/github/gycrosskit/permission/PermissionPlatform.kt,code:docs/功能与平台差异.md | A:- | S:能力key由宿主注册，申请时机和说明UI归宿主；各渠道候选或已发布状态分别核对
+build.gradle.kts[FV6T]: F:应用版本目录插件并统一Maven组、候选版本和Apache许可 | R:code:gradle/libs.versions.toml | A:GROUP,VERSION | S:默认2.0.1为源码候选，环境变量可覆盖
+gradle.properties[FV3T]: F:配置Gradle堆、UTF8、AndroidX及非传递R类 | R:- | A:- | S:-
+gradlew[XV3M]: F:在Unix解析Java与wrapper路径并透传Gradle参数 | R:code:gradle/wrapper/gradle-wrapper.properties | A:命令行参数 | S:-
+gradlew.bat[XV3T]: F:在Windows查找Java并启动Gradle wrapper | R:code:gradle/wrapper/gradle-wrapper.properties | A:命令行参数 | S:-
+jitpack-install.sh[OV7S]: F:核对不可变Tag来源回执、摘要和安全归档再安装同版Maven原件 | R:code:jitpack.yml | A:repository,VERSION,可选目录 | S:校验HEAD和tree、尺寸和hash；拒绝穿越、链接、重复成员及膨胀包
+jitpack.yml[FV5T]: F:使用JDK21运行权限同版Maven原件安装入口 | R:code:jitpack-install.sh | A:JitPack install | S:-
+release-pack.py[OV6T]: F:仅归档指定版本Maven publications并回读metadata与ZIP完整性 | R:code:scripts/package-maven.sh | A:repository,output,version | S:拒绝无publication，不混入旧版本和AppleDouble文件
+settings.gradle.kts[FV7T]: F:统一插件与依赖仓库规则并包含core及Kuikly模块 | R:code:gradle/libs.versions.toml | A:permission根构建 | S:厂商版本限定Eazytec，Kuikly独占完整module来源，禁止子项目私加仓库
+
+===/Users/guoyang/.codex/worktrees/aoci-permission/permission/docs/===
+0.1.4远程发布验收.md[SV3T]: F:保留0.1.4发布与iOS权限取消Main清理的历史验收证据 | R:- | A:- | S:历史编译不代算设备授权验收
+0.1.5发布验收.md[SV3M]: F:保存0.1.5精确源码、归档与Maven/HAR远程发布消费证据 | R:- | A:- | S:当时OHPM审核中且Registry精确安装NOTFOUND
+功能与平台差异.md[SI7L]: F:集中定义权限状态、三端系统差异、可扩展key和实际验证范围 | R:code:permission-core/src/commonMain/kotlin/io/github/gycrosskit/permission/PermissionPlatform.kt | A:- | S:LIMITED可用，RESTRICTED不等于永久拒绝；不同平台API与设备验收按各自证据判断
+发布验收-0.1.3.md[SV3S]: F:保留0.1.3不可变Maven来源、metadata及公开消费验收 | R:- | A:- | S:HAR沿用0.1.2，其历史结果不证明本轮设备行为
+完整源码审查.md[SQ4M]: F:列出历史权限运行源码和桥接审查清单、合同与验证缺口 | R:- | A:- | S:启动受理后才记录Android申请历史
+开发与验证.md[SQ6M]: F:提供权限定向回归、平台构建、原生SDK Module与消费检查入口 | R:- | A:- | S:日常compile仅构建生产目标，行为测试和消费按需独立执行
+接入指南.md[SI7M]: F:说明权限依赖、系统声明、宿主owner、扩展能力和版本迁移接线 | R:- | A:- | S:能力key不是跨平台Manifest串；Maven2.0枚举和handler构造ABI需要同步重建消费者
+
+===/Users/guoyang/.codex/worktrees/aoci-permission/permission/gradle/===
+libs.versions.toml[FV6T]: F:集中固定厂商Kotlin、Kuikly、协程、AndroidX和构建插件版本 | R:code:build.gradle.kts | A:libs版本目录 | S:-
+native-toolchain.properties[FV5T]: F:登记厂商Kotlin版本及iOS/OHOS Native目标集合 | R:- | A:- | S:-
+
+===/Users/guoyang/.codex/worktrees/aoci-permission/permission/gradle/wrapper/===
+gradle-wrapper.properties[FV4T]: F:固定Gradle8.11.1分发和用户缓存位置 | R:- | A:- | S:-
+
+===/Users/guoyang/.codex/worktrees/aoci-permission/permission/iosApp/KuiklyTests/===
+ModuleLifecycleCheck.swift[TQ6S]: F:通过真实SDK接口验证权限receiver失效、排队、工厂竞态和旧回调隔离 | R:code:iosApp/Sources/GycPermissionKuikly/GycPermissionModule.swift | A:Module生命周期测试App | S:handler受控且rootView为占位，不启动真实权限业务
+
+===/Users/guoyang/.codex/worktrees/aoci-permission/permission/iosApp/Sources/GycPermissionKuikly/===
+GycPermissionModule.swift[II8T]: F:在Main创建每Renderer权限handler并将有效回执交付SDK Context队列 | R:code:permission-kuikly/src/iosMain/kotlin/io/github/gycrosskit/permission/kuikly/IosPermissionModuleHandler.kt | A:configure,hrv_call,invalidate | S:先锁内失效再异步Main释放，禁止Main.sync；工厂竞态新建handler立即dispose，迟回执不能交付失效owner
+
+===/Users/guoyang/.codex/worktrees/aoci-permission/permission/ohos/AppScope/===
+app.json5[FV3T]: F:声明HAR工程应用标识和历史应用版本 | R:- | A:- | S:应用包名字段仍为toast，不用作HAR权限服务名
+
+===/Users/guoyang/.codex/worktrees/aoci-permission/permission/ohos/===
+build-profile.json5[FV5T]: F:绑定PermissionNative HAR模块和HarmonyOS API22产品目标 | R:code:ohos/permission-native/build-profile.json5 | A:default产品 | S:target与compatible均6.0.2(22)
+hvigorfile.ts[FV3T]: F:注册根工程Hvigor appTasks | R:- | A:- | S:-
+oh-package.json5[FV3T]: F:声明Hvigor26根工程依赖容器 | R:- | A:- | S:-
+
+===/Users/guoyang/.codex/worktrees/aoci-permission/permission/ohos/hvigor/===
+hvigor-config.json5[FV3T]: F:固定Hvigor26模型及默认运行配置 | R:- | A:- | S:-
+
+===/Users/guoyang/.codex/worktrees/aoci-permission/permission/ohos/permission-native/===
+CHANGELOG.md[SV3T]: F:按HAR版本记录能力扩展、取消屏障和发布候选边界 | R:- | A:- | S:2.0.1渠道对齐保持API实现，旧Tag字节保留
+Index.ets[LI6T]: F:导出HAR权限服务、状态与handler公开类型及Kuikly receiver | R:code:ohos/permission-native/src/main/ets/GycPermissionService.ets,code:ohos/permission-native/src/main/ets/GycPermissionModule.ets | A:GycPermissionService,GycPermission,GycPermissionStatus,GycPermissionHandler,GycPermissionModule | S:-
+LICENSE[SS2M]: F:携带HAR分发所需Apache2许可文本 | R:- | A:- | S:-
+README.md[SI6T]: F:说明HAR精确安装、状态、UIAbility上下文与宿主能力扩展接线 | R:code:ohos/permission-native/src/main/ets/GycPermissionService.ets | A:@gycrosskit/permission-native | S:Maven不自动携带HAR；不能覆盖内置能力key，设置导航归宿主
+build-profile.json5[FV4T]: F:配置PermissionNative为Stage模式HarmonyOS目标 | R:- | A:default目标 | S:-
+hvigorfile.ts[FV3T]: F:注册HAR模块Hvigor harTasks | R:- | A:- | S:-
+oh-package.json5[FV6T]: F:声明权限HAR包版本、入口、许可与Renderer精确依赖 | R:code:ohos/permission-native/Index.ets | A:@gycrosskit/permission-native@2.0.1 | S:精确依赖Renderer2.29.1，宿主统一实际版本
+
+===/Users/guoyang/.codex/worktrees/aoci-permission/permission/ohos/permission-native/src/main/ets/===
+GycPermissionModule.ets[II8T]: F:按页面桥接内置或扩展权限三方法并取消排队项与抑制销毁回执 | R:code:ohos/permission-native/src/main/ets/GycPermissionService.ets | A:GycPermissionModule.call,onDestroy | S:cancelQueued只撤销请求active，已打开弹窗仍由服务等真实回执；每Renderer独占receiver，可注入宿主同一套能力注册
+GycPermissionService.ets[II8S]: F:读取AbilityKit权限事实并在进程共用队列串行申请内置或扩展能力 | R:- | A:getStatus,request,resumeAfterSettings | S:只对NOT_DETERMINED内置权限发起系统申请；粗略定位为LIMITED；静态pending在跨Page取消后仍等真实回执，设置返回只重读事实
+
+===/Users/guoyang/.codex/worktrees/aoci-permission/permission/ohos/permission-native/src/main/===
+module.json5[FV4T]: F:声明PermissionNative HAR类型与default/tablet设备 | R:- | A:PermissionNative | S:-
+
+===/Users/guoyang/.codex/worktrees/aoci-permission/permission/ohos/permission-native/test/===
+permission.test.cjs[TI6S]: F:转译真实ArkTS服务并用SDK替身验证状态、申请、队列与扩展key | R:code:ohos/permission-native/src/main/ets/GycPermissionService.ets | A:Node test入口 | S:SDK权限状态与系统弹窗为替身，不证明设备体验
+
+===/Users/guoyang/.codex/worktrees/aoci-permission/permission/permission-core/===
+build.gradle.kts[FV6T]: F:配置权限core多平台变体、公共协程和ComponentActivity依赖及回归 | R:code:gradle/libs.versions.toml | A:permission-core | S:ComponentActivity在公共API中故以api依赖导出，Android JVM11、最低API24
+
+===/Users/guoyang/.codex/worktrees/aoci-permission/permission/permission-core/src/androidMain/kotlin/io/github/gycrosskit/permission/===
+AndroidPermissionPlatform.kt[II9S]: F:用Activity宿主栈和请求owner串行查询申请权限并维护系统弹窗屏障 | R:code:permission-core/src/androidMain/kotlin/io/github/gycrosskit/permission/AndroidRuntimePermission.kt | A:bind,unbind,getStatus,request,resumeAfterSettings | S:协程取消不关闭弹窗，下次申请等真实回调或解绑；launcher独占key，旧回执不能完成后继；只在launch受理后记历史，临时host解绑恢复前host
+AndroidRuntimePermission.kt[II8S]: F:执行单个Manifest权限申请、实时事实与历史映射并保存可选持久历史 | R:- | A:requestRuntimePermission,AndroidPermissionRequestHistory,AndroidRuntimePermissionState | S:历史和无rationale不证明永久拒绝；只有实际重试拒绝且无解释才SETTINGS_REQUIRED；空回执保持DENIED，取消只注销launcher，不关闭弹窗
+
+===/Users/guoyang/.codex/worktrees/aoci-permission/permission/permission-core/src/androidUnitTest/kotlin/io/github/gycrosskit/permission/===
+AndroidPermissionHistoryTest.kt[TI5T]: F:验证临时host解绑恢复、重复绑定拒绝与旧namespace历史延续 | R:code:permission-core/src/androidMain/kotlin/io/github/gycrosskit/permission/AndroidPermissionPlatform.kt | A:AndroidPermissionHistoryTest | S:Robolectric替身，不证明系统弹窗
+AndroidPermissionLaunchTest.kt[TI5T]: F:验证launcher启动失败不写历史且不阻塞下次请求 | R:code:permission-core/src/androidMain/kotlin/io/github/gycrosskit/permission/AndroidPermissionPlatform.kt | A:AndroidPermissionLaunchTest | S:-
+AndroidPermissionStatusResolverTest.kt[TI5T]: F:验证已授权优先、受限授权、策略限制及申请历史的跨端状态映射 | R:code:permission-core/src/androidMain/kotlin/io/github/gycrosskit/permission/AndroidPermissionPlatform.kt | A:AndroidPermissionStatusResolverTest | S:-
+AndroidRuntimePermissionTest.kt[TI6S]: F:验证运行时权限重试、空回执、策略限制和取消launcher归属 | R:code:permission-core/src/androidMain/kotlin/io/github/gycrosskit/permission/AndroidRuntimePermission.kt | A:AndroidRuntimePermissionTest | S:Robolectric权限替身；旧历史不能阻止一次授权失效后再次申请
+
+===/Users/guoyang/.codex/worktrees/aoci-permission/permission/permission-core/src/commonMain/kotlin/io/github/gycrosskit/permission/===
+PermissionPlatform.kt[LI9T]: F:定义内置权限和跨端状态查询、申请、设置恢复及字符串能力入口 | R:code:permission-core/src/commonMain/kotlin/io/github/gycrosskit/permission/PermissionStatus.kt | A:AppPermission,PermissionPlatform | S:取消只停止等待不能关闭系统弹窗；String代表能力key，未注册返回UNSUPPORTED，平台自行调度UI线程
+PermissionRegistry.kt[LI8T]: F:在既有平台owner上按key注入扩展handler并保持内置权限委派 | R:code:permission-core/src/commonMain/kotlin/io/github/gycrosskit/permission/PermissionPlatform.kt | A:PermissionRegistry,PermissionHandler | S:复制注册表且不缓存状态；禁止空key、覆盖内置key或嵌套注册表已有key；handler负责线程、取消和系统弹窗屏障
+PermissionRequestFlow.kt[DI8S]: F:编排实时查询、用途说明、实际申请与可选设置返回并提供配置快照 | R:code:permission-core/src/commonMain/kotlin/io/github/gycrosskit/permission/PermissionPlatform.kt | A:requestWithFlow,PermissionFlowDefaults,PermissionFlowHandlers,PermissionRequestResult | S:未配置说明默认取消；只有流程前已DENIED且实际重试仍DENIED才问设置；LIMITED可用，取消不调用onDenied，平台异常和协程取消继续传播
+PermissionStatus.kt[LI8T]: F:定义六种跨端权限状态及完整或受限授权可用性 | R:- | A:PermissionStatus,allowsUse | S:RESTRICTED和UNSUPPORTED不能经普通设置恢复；LIMITED按受限能力继续可用
+
+===/Users/guoyang/.codex/worktrees/aoci-permission/permission/permission-core/src/iosMain/kotlin/io/github/gycrosskit/permission/===
+IosPermissionPlatform.kt[II9S]: F:在Main桥接AVFoundation与CoreLocation授权并维护取消后原生弹窗屏障 | R:code:permission-core/src/commonMain/kotlin/io/github/gycrosskit/permission/PermissionPlatform.kt | A:IosPermissionPlatform.getStatus,request | S:manager延迟在Main创建，原生Deferred独立调用方Job；取消后下次请求仍等真实回执；缺少Usage Description系统会终止应用，粗略定位为LIMITED
+
+===/Users/guoyang/.codex/worktrees/aoci-permission/permission/permission-kuikly/===
+build.gradle.kts[FV6T]: F:配置权限Kuikly多平台调用侧和Android receiver依赖与staging | R:code:permission-core/build.gradle.kts | A:permission-kuikly | S:公开传递core及Kuikly，Android目标JVM11
+
+===/Users/guoyang/.codex/worktrees/aoci-permission/permission/permission-kuikly/src/androidMain/kotlin/io/github/gycrosskit/permission/kuikly/===
+AndroidPermissionModule.kt[II7T]: F:按Renderer创建权限handler并在销毁时释放等待与回调 | R:code:permission-kuikly/src/commonMain/kotlin/io/github/gycrosskit/permission/kuikly/PermissionModuleHandler.kt | A:AndroidPermissionModule,registerPermissionModule | S:factory不得复用receiver，platform复用宿主原生owner
+
+===/Users/guoyang/.codex/worktrees/aoci-permission/permission/permission-kuikly/src/commonMain/kotlin/io/github/gycrosskit/permission/kuikly/===
+PermissionModule.kt[II8T]: F:桥接权限三方法并串行申请、按唯一ID撤销排队和清理callback | R:code:permission-core/src/commonMain/kotlin/io/github/gycrosskit/permission/PermissionPlatform.kt | A:PermissionModule,dispose | S:桥等待120秒；OHOS内置设置恢复保留NOT_DETERMINED再申请策略；销毁检查resume迟交付，未完成时cancelQueued不解除原生系统弹窗屏障
+PermissionModuleHandler.kt[II8T]: F:校验权限key和请求ID并在Main按renderer独占Job调用宿主platform | R:code:permission-core/src/commonMain/kotlin/io/github/gycrosskit/permission/PermissionPlatform.kt | A:call,dispose | S:cancelQueued只取消对应等待；旧Job按身份移除表项，dispose不解绑宿主owner或提前解除弹窗屏障
+
+===/Users/guoyang/.codex/worktrees/aoci-permission/permission/permission-kuikly/src/iosMain/kotlin/io/github/gycrosskit/permission/kuikly/===
+IosPermissionModuleHandler.kt[II6T]: F:导出宿主PermissionPlatform供Swift receiver的call与dispose方法引用 | R:code:permission-kuikly/src/commonMain/kotlin/io/github/gycrosskit/permission/kuikly/PermissionModuleHandler.kt | A:IosPermissionModuleHandler | S:构造参数为PermissionPlatform，旧IosPermissionPlatform构造ABI须重建Shared framework
+
+===/Users/guoyang/.codex/worktrees/aoci-permission/permission/scripts/===
+build.sh[OV7T]: F:按显式平台调用权限生产目标编译及Maven/HAR打包入口 | R:code:scripts/package-maven.sh,code:scripts/ci-build-kuikly-render.sh | A:compile|package --platform | S:iOS额外编译真实Module Pod；Harmony compile继续构建HAR，依赖准备标志不跳过构建
+check-maven.py[XQ7M]: F:逐项校验本地Maven变体、来源元数据、制品字节、sidecar和许可 | R:- | A:repository,group,version,modules_csv,native_targets_csv | S:实际文件及available-at同名变体必须存在，可额外约束JVM字节码major
+check-public-maven.py[XQ7L]: F:只读校验公开JitPack不可变身份、publication清单与实际字节和摘要 | R:- | A:--repo,--version,--commit,--expected-publications | S:要求公开ok Tag及完整SHA，渠道sidecar缺失独立记录，不运行消费者构建
+ci-build-kuikly-render.sh[OV6S]: F:从固定Renderer和本地或不可变Tag构建真实Simulator Module Pod | R:code:GycPermissionKuikly.podspec | A:绝对构建目录,可选Pod和远程来源 | S:严格校验Pod、仓库及Tag，真实消费与SDK编译分别留证
+ci-java.security[FV3T]: F:配置CI正向DNS缓存一小时并禁用负缓存 | R:- | A:- | S:-
+ci-release.sh[OV7T]: F:从真实远端Tag解析来源并复验同版归档及公开Maven制品 | R:code:jitpack-install.sh,code:scripts/check-maven.py,code:scripts/check-public-maven.py | A:VERSION | S:历史0.1.0至0.1.8保留8个publication，后续版本验证完整12个；不可用PR SHA替代Tag来源
+ci-repositories.gradle[FV6T]: F:设置CI编译缓存、行为测试真实执行及受控Maven仓库过滤 | R:- | A:GYC_CI_BUILD_CACHE | S:测试禁缓存和up-to-date跳过；DNS预热失败交实际解析裁决，厂商版本仍保留Eazytec
+jitpack-metadata.py[XV7T]: F:预校验全体metadata后裁剪JitPack不安全classifier及空资源变体 | R:- | A:normalize,staging路径 | S:非空资源禁止裁剪，必须修复发布；验证全体后才写避免半改仓库
+package-maven.sh[OV6T]: F:发布指定候选到全新staging并规范metadata、归档及生成摘要 | R:code:release-pack.py,code:scripts/jitpack-metadata.py | A:VERSION和额外Gradle参数 | S:已有staging或归档拒绝执行，避免覆盖和混入旧候选
+test-check-maven.py[TQ5T]: F:执行真实Maven checker覆盖完整及故意损坏staging | R:code:scripts/check-maven.py | A:CheckerTest | S:-
+test-jitpack-metadata.py[TQ5T]: F:以真实ZIP和metadata验证裁剪、引用与失败原子性 | R:code:scripts/jitpack-metadata.py | A:PublicationContracts | S:-
+verify-kuikly-assembly.sh[XQ6T]: F:从当前staging导出consumer framework并用真实Pod类型检查Swift方法装配 | R:code:verification-consumer/NativeModuleAssembly.swift | A:真实Simulator Products目录 | S:分阶段记录staging与consumer耗时，本地装配不代算远程消费
+verify-kuikly-module.sh[XQ7M]: F:运行真实Simulator receiver检查并以当次UUID完成回执验收 | R:code:iosApp/KuiklyTests/ModuleLifecycleCheck.swift | A:Products目录或--test-receipt | S:launch成功且回执run_id及PASS精确匹配才通过；只清理本次拥有的App和启动设备，旧Booted设备不关机
+
+===/Users/guoyang/.codex/worktrees/aoci-permission/permission/tests/===
+test_jitpack_install.py[TQ6T]: F:离线执行真实安装校验段覆盖来源摘要和归档安全边界 | R:code:jitpack-install.sh | A:JitPackInstallTest | S:失败应发生在提取制品之前，不调用网络或SDK
+
+===/Users/guoyang/.codex/worktrees/aoci-permission/permission/verification-consumer/===
+NativeModuleAssembly.swift[TQ6T]: F:用真实导出PermissionPlatform为Swift receiver装配handler方法引用 | R:code:iosApp/Sources/GycPermissionKuikly/GycPermissionModule.swift,code:permission-kuikly/src/iosMain/kotlin/io/github/gycrosskit/permission/kuikly/IosPermissionModuleHandler.kt | A:configurePermissionModule | S:消费者framework导出实际类型，宿主不重写transport
+build.gradle.kts[FV6T]: F:建立独立多平台Maven消费者并导出Simulator权限framework | R:code:verification-consumer/settings.gradle.kts | A:permissionVersion,kuiklyRenderFrameworkDir | S:0.1.0至0.1.8跳过当时不存在的Android/iOS Native接线，当前版本链接真实Renderer
+gradle.properties[FV3T]: F:配置独立消费者AndroidX与Gradle堆 | R:- | A:- | S:-
+settings.gradle.kts[FV5T]: F:限定组件坐标消费仓库并配置工具链与SDK依赖源 | R:code:verification-consumer/build.gradle.kts | A:permissionMavenRepo | S:默认公网JitPack，本地staging必须显式传入并单独留证
+
+===/Users/guoyang/.codex/worktrees/aoci-permission/permission/verification-consumer/src/androidMain/kotlin/===
+AndroidProbe.kt[TI5T]: F:编译验证Android权限owner构造、历史迁移与Manifest单权限执行器 | R:code:permission-core/src/androidMain/kotlin/io/github/gycrosskit/permission/AndroidPermissionPlatform.kt,code:permission-core/src/androidMain/kotlin/io/github/gycrosskit/permission/AndroidRuntimePermission.kt | A:androidPermissionPlatform,migratedPermissionPlatform,permissionPlatformWithHistory,mediaPermission | S:-
+
+===/Users/guoyang/.codex/worktrees/aoci-permission/permission/verification-consumer/src/commonMain/kotlin/===
+Probe.kt[TI4T]: F:编译验证相机权限状态查询及allowsUse公共入口 | R:code:permission-core/src/commonMain/kotlin/io/github/gycrosskit/permission/PermissionPlatform.kt | A:cameraIsUsable | S:-
+
+===/Users/guoyang/.codex/worktrees/aoci-permission/permission/verification-consumer/src/iosMain/kotlin/===
+IosProbe.kt[TI4T]: F:编译验证iOS权限platform构造 | R:code:permission-core/src/iosMain/kotlin/io/github/gycrosskit/permission/IosPermissionPlatform.kt | A:iosPermissionPlatform | S:-
+
+===/Users/guoyang/.codex/worktrees/aoci-permission/permission/verification-consumer/src/kuiklyNativeAndroidMain/kotlin/===
+NativeModuleProbe.kt[TI4T]: F:编译验证Android真实Renderer权限注册扩展 | R:code:permission-kuikly/src/androidMain/kotlin/io/github/gycrosskit/permission/kuikly/AndroidPermissionModule.kt | A:registerKuiklyPermission | S:-
+
+===/Users/guoyang/.codex/worktrees/aoci-permission/permission/verification-consumer/src/kuiklyNativeIosMain/kotlin/===
+NativeModuleProbe.kt[TI4T]: F:编译验证iOS权限handler接受宿主原生platform | R:code:permission-kuikly/src/iosMain/kotlin/io/github/gycrosskit/permission/kuikly/IosPermissionModuleHandler.kt | A:iosKuiklyPermissionHandler | S:-
+
+===/Users/guoyang/.codex/worktrees/aoci-permission/permission/verification-consumer/src/ohosArm64Main/kotlin/===
+OhosProbe.kt[TI4T]: F:编译验证OHOS权限Module构造 | R:code:permission-kuikly/src/commonMain/kotlin/io/github/gycrosskit/permission/kuikly/PermissionModule.kt | A:ohosPermissionPlatform | S:-
+
+===/Users/guoyang/.codex/worktrees/aoci-permission/permission/verification-kuikly/===
+build.gradle.kts[FV5T]: F:在独立JVM工程编译生产core、iOS和Module并提供SDK替身回归 | R:- | A:test | S:JVM17；Apple与Kuikly替身只限测试，生产状态和协程代码真实执行
+settings.gradle.kts[FV3T]: F:配置独立权限生命周期回归的插件与依赖仓库 | R:- | A:- | S:-
+
+===/Users/guoyang/.codex/worktrees/aoci-permission/permission/verification-kuikly/src/test/kotlin/===
+IosPermissionLifecycleTest.kt[TI6T]: F:验证生产iOS取消后仍等真实原生屏障且旧回调不完成新owner | R:code:permission-core/src/iosMain/kotlin/io/github/gycrosskit/permission/IosPermissionPlatform.kt | A:IosPermissionLifecycleTest | S:Apple API替身下执行生产Kotlin，不证明系统权限弹窗
+IosSdkAVFoundation.kt[TQ4T]: F:提供受控AVFoundation授权请求与completion记录 | R:- | A:AVCaptureDevice,nativeRequests,nativeCallbacks | S:测试替身不访问相机或麦克风
+IosSdkCoreLocation.kt[TQ4T]: F:提供CoreLocation manager、授权与delegate的最小测试替身 | R:- | A:CLLocationManager,locationManagers | S:-
+IosSdkDarwin.kt[TQ2T]: F:提供JVM编译生产iOS源码所需NSObject占位 | R:- | A:NSObject | S:-
+IosSdkInterop.kt[TQ2T]: F:提供JVM编译生产iOS源码所需ForeignApi opt-in注解占位 | R:- | A:ExperimentalForeignApi | S:-
+KuiklyJson.kt[TQ4T]: F:以org.json提供生产Module测试所需Kuikly JSON最小接口 | R:- | A:JSONObject,JSONArray | S:仅用于独立回归，不证明真实SDK序列化
+KuiklyPageData.kt[TQ3T]: F:构造Module测试所需Android/iOS平台标识 | R:- | A:PageData | S:真实属性兼容性由SDK消费编译验证
+KuiklyTransport.kt[TQ4T]: F:截获生产Module原生调用、取消及callback移除以驱动生命周期回归 | R:- | A:Module,NativeResult,CallbackRef | S:只替代SDK传输，生产协程和状态映射真实执行
+PermissionModuleHandlerTest.kt[TI6S]: F:覆盖生产handler取消ID归属、扩展key全链路及各平台设置恢复 | R:code:permission-kuikly/src/commonMain/kotlin/io/github/gycrosskit/permission/kuikly/PermissionModuleHandler.kt,code:permission-core/src/commonMain/kotlin/io/github/gycrosskit/permission/PermissionRegistry.kt | A:PermissionModuleHandlerTest | S:受控platform不打开系统弹窗，验证旧终态不能交付后继owner
+PermissionModuleLifecycleTest.kt[TI6T]: F:验证Module串行等待取消、销毁迟回执与设置恢复状态策略 | R:code:permission-kuikly/src/commonMain/kotlin/io/github/gycrosskit/permission/kuikly/PermissionModule.kt | A:PermissionModuleLifecycleTest | S:传输替身检查生产Kotlin，LIMITED保持可用且已决定状态不重开权限UI
+PermissionRequestFlowTest.kt[TI7M]: F:覆盖用途说明、重试设置、可用状态、默认hook快照与每阶段取消 | R:code:permission-core/src/commonMain/kotlin/io/github/gycrosskit/permission/PermissionRequestFlow.kt | A:PermissionRequestFlowTest | S:显式空配置优先于默认值；配置变化不改变在途快照，取消不能继续后续交互
+
+===/Users/guoyang/.codex/worktrees/aoci-permission/permission/verification/ci/===
+test_cache_contract.py[TQ4T]: F:静态检查编译缓存、行为测试不复用与既有装配耗时门禁 | R:code:scripts/ci-repositories.gradle,code:scripts/verify-kuikly-assembly.sh | A:Python断言入口 | S:文本合同不证明真实Gradle任务执行
+test_native_ci_overlap.py[TQ6M]: F:以SDK命令替身验证设备归属清理、fresh回执和并行检查失败传播 | R:code:scripts/verify-kuikly-module.sh | A:CI_AUTOMATION_ROOT绑定的Python检查入口 | S:依赖固定CI源码，所有平台命令均为替身；同时要求module和assembly结果，不证明真实SDK验收
+
+===/Users/guoyang/.codex/worktrees/aoci-permission/permission/verification/===
+验收记录.md[SQ3L]: F:保存权限历史兼容、0.1.2构建发布和精确远程消费历史证据 | R:- | A:- | S:历史标签和设备未验范围保持原时点，不作为当前候选通过
